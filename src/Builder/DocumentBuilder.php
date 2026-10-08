@@ -17,6 +17,8 @@ namespace BiztechEG\EasyPdfWord\Builder;
  * Text styles: bold, italic, size (pt), color (#hex), align (start, end,
  * center, justify), background (#hex, table cells only), ltr (keep a phone
  * number, code or e-mail in left-to-right order inside Arabic text).
+ * Paragraphs also take space_after (mm) and line_height (1.5 = one and a
+ * half lines).
  *
  * A table cell is a string, or an array with "text" (or "lines" for several
  * paragraphs, "image" for a picture, "qr" for a QR code) plus any text
