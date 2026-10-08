@@ -4,6 +4,7 @@ namespace BiztechEG\EasyPdfWord\Pdf\Drivers;
 
 use BiztechEG\EasyPdfWord\Contracts\PdfDriver;
 use BiztechEG\EasyPdfWord\Pdf\PdfOptions;
+use BiztechEG\EasyPdfWord\Pdf\Watermark;
 use Illuminate\Http\Client\Factory as Http;
 use RuntimeException;
 
@@ -38,7 +39,7 @@ class GotenbergDriver implements PdfDriver
 
         $request = $this->http
             ->timeout((int) ($this->config['timeout'] ?? 60))
-            ->attach('files', $html, 'index.html');
+            ->attach('files', Watermark::inject($html, $options), 'index.html');
 
         foreach (['header' => $options->header, 'footer' => $options->footer] as $name => $part) {
             if ($part) {

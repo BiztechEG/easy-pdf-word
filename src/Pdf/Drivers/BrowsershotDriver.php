@@ -5,6 +5,7 @@ namespace BiztechEG\EasyPdfWord\Pdf\Drivers;
 use BiztechEG\EasyPdfWord\Contracts\PdfDriver;
 use BiztechEG\EasyPdfWord\Exceptions\DriverNotAvailable;
 use BiztechEG\EasyPdfWord\Pdf\PdfOptions;
+use BiztechEG\EasyPdfWord\Pdf\Watermark;
 use Spatie\Browsershot\Browsershot;
 
 /**
@@ -34,7 +35,7 @@ class BrowsershotDriver implements PdfDriver
         [$top, $right, $bottom, $left] = $options->margins;
         [$width, $height] = $options->paperSize();
 
-        $browsershot = Browsershot::html($html)
+        $browsershot = Browsershot::html(Watermark::inject($html, $options))
             ->paperSize($width, $height, 'mm')
             ->margins($top, $right, $bottom, $left, 'mm')
             ->showBackground()
