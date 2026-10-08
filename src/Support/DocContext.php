@@ -77,6 +77,23 @@ class DocContext
         return new HtmlString('<bdo dir="ltr">'.e((string) $value).'</bdo>');
     }
 
+    /**
+     * Any value as display text: dates as Y/m/d, enums by value, booleans
+     * as ✓, arrays and objects as JSON.
+     */
+    public function text(mixed $value): string
+    {
+        return match (true) {
+            $value === null => '',
+            is_bool($value) => $value ? '✓' : '',
+            $value instanceof \DateTimeInterface => $value->format('Y/m/d'),
+            $value instanceof \BackedEnum => (string) $value->value,
+            $value instanceof \UnitEnum => $value->name,
+            is_scalar($value), $value instanceof \Stringable => (string) $value,
+            default => (string) json_encode($value, JSON_UNESCAPED_UNICODE),
+        };
+    }
+
     /** Format a number with thousands separators. Digits follow the document's numerals setting. */
     public function number(int|float|string|null $value, int $decimals = 2): HtmlString
     {

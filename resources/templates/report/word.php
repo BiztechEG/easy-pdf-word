@@ -20,7 +20,7 @@ return function (DocumentBuilder $word, array $data, DocContext $doc): void {
     $format = fn (array $column, mixed $value) => match ($column['format']) {
         'number', 'money' => $value === null || $value === '' ? '' : $doc->numberText($value, $column['decimals']),
         'date' => $value ? Carbon::parse($value)->format('Y/m/d') : '',
-        default => (string) $value,
+        default => $doc->text($value),
     };
 
     $word->table([[
