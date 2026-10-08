@@ -61,6 +61,11 @@ class GotenbergDriver implements PdfDriver
             throw new RuntimeException("Gotenberg returned HTTP {$response->status()}: ".substr($response->body(), 0, 300));
         }
 
+        // A proxy or a wrong URL can answer 200 with a web page.
+        if (! str_starts_with($response->body(), '%PDF-')) {
+            throw new RuntimeException('Gotenberg did not return a PDF; check DOC_GOTENBERG_URL. It returned: '.substr(strip_tags($response->body()), 0, 200));
+        }
+
         return $response->body();
     }
 
