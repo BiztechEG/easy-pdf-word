@@ -50,6 +50,9 @@ return [
     'prepare' => function (array $data): array {
         $quantity = 0.0;
 
+        // Numbered 1, 2, 3 ... whatever the keys (a filtered collection keeps its keys).
+        $data['items'] = array_values($data['items']);
+
         foreach ($data['items'] as $i => $item) {
             $quantity += (float) $item['quantity'];
 

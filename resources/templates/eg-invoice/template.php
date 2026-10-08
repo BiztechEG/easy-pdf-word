@@ -90,6 +90,9 @@ return [
         $sales = $discounts = $net = $total = 0.0;
         $decimals = Currency::decimals($data['document']['currency'] ?? null);
 
+        // Numbered 1, 2, 3 ... whatever the keys (a filtered collection keeps its keys).
+        $data['lines'] = array_values($data['lines']);
+
         foreach ($data['lines'] as $i => $line) {
             $lineSales = round((float) $line['quantity'] * (float) $line['unit_price'], 5);
             $lineDiscount = (float) ($line['discount'] ?? 0);

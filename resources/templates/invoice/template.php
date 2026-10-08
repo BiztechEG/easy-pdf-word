@@ -51,6 +51,9 @@ return [
         $subtotal = $discount = 0.0;
 
         // Each line is rounded, so the lines add up to the subtotal.
+        // Numbered 1, 2, 3 ... whatever the keys (a filtered collection keeps its keys).
+        $data['items'] = array_values($data['items']);
+
         foreach ($data['items'] as $i => $item) {
             $gross = round((float) $item['quantity'] * (float) $item['unit_price'], $decimals);
             $itemDiscount = round((float) ($item['discount'] ?? 0), $decimals);
