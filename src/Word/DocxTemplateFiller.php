@@ -35,6 +35,9 @@ class DocxTemplateFiller
     /** @var string[] temporary files, removed after each fill */
     private array $temporary = [];
 
+    /** Decimals for amounts: those of the document's currency (KWD 3, EGP 2). */
+    private int $decimals = 2;
+
     public function fill(string $path, array $data, DocContext $doc): string
     {
         if (! class_exists(TemplateProcessor::class)) {
@@ -45,6 +48,8 @@ class DocxTemplateFiller
         Settings::setOutputEscapingEnabled(true);
 
         try {
+            $currency = $data['currency'] ?? $data['invoice']['currency'] ?? $data['document']['currency'] ?? null;
+            $this->decimals = $doc->decimals(is_string($currency) ? $currency : null);
             $values = $this->flatten($data + ['theme' => $doc->theme, 't' => $doc->translations()]);
             $values += $this->extras($data, $doc);
             $processor = new TemplateProcessor($path);
@@ -168,7 +173,7 @@ class DocxTemplateFiller
         $text = match (true) {
             $value === null => '',
             is_bool($value) => $value ? '✓' : '',
-            is_float($value) => $doc->numberText($value),
+            is_float($value) => $doc->numberText($value, $this->decimals),
             $value instanceof DateTimeInterface => $value->format('Y/m/d'),
             is_scalar($value), $value instanceof Stringable => (string) $value,
             default => '',
