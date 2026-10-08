@@ -119,7 +119,7 @@ class DocContext
     }
 
     /** "1,250.50" and "١٬٢٥٠٫٥٠" as 1250.5, not 1. */
-    private static function toFloat(int|float|string|null $value): float
+    public static function toFloat(int|float|string|null $value): float
     {
         return is_string($value) ? (float) str_replace([',', ' '], '', Numerals::toLatin($value)) : (float) $value;
     }
@@ -127,7 +127,7 @@ class DocContext
     /** A rate or percentage with only the decimals it needs: 14, 2.5, 0.75. */
     public function rate(int|float|string|null $value): string
     {
-        return rtrim(rtrim(number_format((float) $value, 2, '.', ''), '0'), '.');
+        return rtrim(rtrim(number_format(self::toFloat($value), 2, '.', ''), '0'), '.');
     }
 
     public function money(int|float|string|null $value, ?string $currency = null, int $decimals = 2): HtmlString
