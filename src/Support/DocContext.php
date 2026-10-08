@@ -137,6 +137,12 @@ class DocContext
         return $only ? 'فقط '.$text.' لا غير' : $text;
     }
 
+    /** Hijri dates need the intl extension; templates skip them without it. */
+    public function hasHijri(): bool
+    {
+        return class_exists(\IntlDateFormatter::class);
+    }
+
     public function hijri(mixed $date = null, string $pattern = 'd MMMM y'): string
     {
         return Arabic::hijri($date, $pattern, Numerals::LATIN);

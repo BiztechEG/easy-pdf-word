@@ -34,7 +34,7 @@ return function (DocumentBuilder $word, array $data, DocContext $doc): void {
 
     $reference[] = ['', ['text' => $doc->t('date'), 'color' => $muted], $date->format('Y/m/d')];
 
-    if (($data['show_hijri'] ?? true) && $doc->isRtl()) {
+    if (($data['show_hijri'] ?? true) && $doc->isRtl() && $doc->hasHijri()) {
         $reference[] = ['', ['text' => $doc->t('hijri'), 'color' => $muted], $doc->hijri($date)];
     }
 

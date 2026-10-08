@@ -34,7 +34,7 @@ return function (DocumentBuilder $word, array $data, DocContext $doc): void {
         ['text' => $doc->t('date').': '.$date($invoice['date'])],
     ];
 
-    if ($doc->isRtl()) {
+    if ($doc->isRtl() && $doc->hasHijri()) {
         $meta[] = ['text' => $doc->t('hijri_date').': '.$doc->hijri($invoice['date'])];
     }
 

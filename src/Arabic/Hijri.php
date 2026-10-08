@@ -10,8 +10,8 @@ use RuntimeException;
 /**
  * Hijri (Umm al-Qura) dates through the intl extension.
  *
- *   Hijri::format('2026-10-08');                 // ٢٦ ربيع الآخر ١٤٤٨ هـ
- *   Hijri::format('2026-10-08', numerals: 'latin'); // 26 ربيع الآخر 1448 هـ
+ *   Hijri::format('2026-10-08');                 // ٢٧ ربيع الآخر ١٤٤٨ هـ
+ *   Hijri::format('2026-10-08', numerals: 'latin'); // 27 ربيع الآخر 1448 هـ
  */
 class Hijri
 {

@@ -123,7 +123,7 @@ class DocxTemplateFiller
         $date = $data['date'] ?? $data['invoice']['date'] ?? null;
 
         return array_filter([
-            'doc.hijri_date' => $date ? $doc->hijri($date) : null,
+            'doc.hijri_date' => $date && $doc->hasHijri() ? $doc->hijri($date) : null,
             'doc.today' => now()->format('Y/m/d'),
             'doc.qr' => ! empty($data['qr']) && is_string($data['qr']) ? Qr::dataUri($data['qr']) : null,
         ], fn ($value) => $value !== null);
