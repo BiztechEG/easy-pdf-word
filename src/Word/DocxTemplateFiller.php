@@ -85,9 +85,11 @@ class DocxTemplateFiller
     private function fillRows(TemplateProcessor $processor, array $data, array $variables, DocContext $doc): void
     {
         foreach ($data as $key => $list) {
-            if (! is_array($list) || ! array_is_list($list) || $list === [] || ! is_array($list[0])) {
+            if (! is_array($list) || $list === [] || ! self::isList($list) || ! is_array(reset($list))) {
                 continue;
             }
+
+            $list = array_values($list);
 
             $first = collect($variables)->first(fn ($v) => str_starts_with($v, $key.'.'));
 
@@ -138,10 +140,10 @@ class DocxTemplateFiller
         $flat = [];
 
         foreach ($data as $key => $value) {
-            if (is_array($value) && ! array_is_list($value)) {
+            if (is_array($value) && ! self::isList($value)) {
                 $flat += $this->flatten($value, $prefix.$key.'.');
             } elseif (is_array($value)) {
-                if ($value === [] || ! is_array($value[0] ?? null)) {
+                if ($value === [] || ! is_array(reset($value))) {
                     $flat[$prefix.$key] = implode('، ', array_map('strval', $value));
                 }
             } else {
@@ -150,6 +152,12 @@ class DocxTemplateFiller
         }
 
         return $flat;
+    }
+
+    /** A list of rows, also when filtering left gaps in its keys (0, 2, 5). */
+    private static function isList(array $value): bool
+    {
+        return array_is_list($value) || array_filter(array_keys($value), 'is_string') === [];
     }
 
     private function text(mixed $value, DocContext $doc): string
