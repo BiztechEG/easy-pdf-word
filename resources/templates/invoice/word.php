@@ -119,7 +119,7 @@ return function (DocumentBuilder $word, array $data, DocContext $doc): void {
         $totalRows[] = ['', $doc->t('discount'), '-'.$doc->numberText($totals['discount'], $decimals)];
     }
 
-    $totalRows[] = ['', $doc->t('vat', ['rate' => $doc->numberText($invoice['tax_rate'], 0)]), $doc->numberText($totals['tax'], $decimals)];
+    $totalRows[] = ['', $doc->t('vat', ['rate' => $doc->rate($invoice['tax_rate'])]), $doc->numberText($totals['tax'], $decimals)];
 
     $grand = ['bold' => true, 'size' => 11.5, 'color' => '#FFFFFF', 'background' => $primary];
     $totalRows[] = ['', ['text' => $doc->t('total')] + $grand, ['text' => $doc->numberText($totals['total'], $decimals).' '.$currencyLabel] + $grand];

@@ -108,7 +108,7 @@ return function (DocumentBuilder $quote, array $data, DocContext $doc): void {
     }
 
     if ($totals['tax'] > 0) {
-        $sum[] = ['', $doc->t('vat', ['rate' => $doc->numberText($info['tax_rate'], 0)]), $doc->numberText($totals['tax'], $decimals)];
+        $sum[] = ['', $doc->t('vat', ['rate' => $doc->rate($info['tax_rate'])]), $doc->numberText($totals['tax'], $decimals)];
     }
 
     $grand = ['bold' => true, 'size' => 11.5, 'color' => '#FFFFFF', 'background' => $primary];

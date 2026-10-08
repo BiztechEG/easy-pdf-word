@@ -112,6 +112,12 @@ class DocContext
         return number_format((float) $value, $decimals);
     }
 
+    /** A rate or percentage with only the decimals it needs: 14, 2.5, 0.75. */
+    public function rate(int|float|string|null $value): string
+    {
+        return rtrim(rtrim(number_format((float) $value, 2, '.', ''), '0'), '.');
+    }
+
     public function money(int|float|string|null $value, ?string $currency = null, int $decimals = 2): HtmlString
     {
         $amount = $this->number($value, $decimals)->toHtml();
