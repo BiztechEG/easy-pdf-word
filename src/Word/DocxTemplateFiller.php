@@ -57,15 +57,18 @@ class DocxTemplateFiller
             foreach (array_unique($processor->getVariables()) as $variable) {
                 $name = explode(':', $variable)[0];
                 $value = $values[$name] ?? null;
+                // Read through $doc->image(), so the allowed folders and hosts apply.
+                $source = $this->isImage($value) ? $doc->image($value) : null;
 
-                if ($this->isImage($value) && ($image = $this->imageFile($value, $doc))) {
+                if ($source !== null && ($image = $this->imageFile($source))) {
                     $processor->setImageValue($name, $this->imageOptions($variable, $image));
 
                     continue;
                 }
 
-                // An image that cannot be used leaves the placeholder empty rather than printing the data URI.
-                $processor->setValue($variable, is_string($value) && str_starts_with($value, 'data:') ? '' : $this->text($value, $doc));
+                // An image Word cannot show (SVG) or may not read leaves the
+                // placeholder empty rather than printing a data URI or a path.
+                $processor->setValue($variable, $source !== null || (is_string($value) && str_starts_with($value, 'data:')) ? '' : $this->text($value, $doc));
             }
 
             $file = $this->temporary[] = tempnam(sys_get_temp_dir(), 'easy-docx');
@@ -182,27 +185,15 @@ class DocxTemplateFiller
     private function isImage(mixed $value): bool
     {
         return is_string($value)
-            && (str_starts_with($value, 'data:image/') || preg_match('/\.(png|jpe?g|gif|bmp)$/i', $value) === 1);
+            && (str_starts_with($value, 'data:image/') || preg_match('/\.(png|jpe?g|gif|bmp|webp|svg)$/i', $value) === 1);
     }
 
-    /**
-     * A local copy of the image, read through $doc->image() so the allowed
-     * folders and hosts apply. Null when the image cannot be used.
-     */
-    private function imageFile(string $value, DocContext $doc): ?string
+    /** A local copy of an allowed image, for PhpWord. Null when Word cannot show it. */
+    private function imageFile(string $source): ?string
     {
-        $value = $doc->image($value);
+        $bytes = WordImage::load($source);
 
-        $bytes = match (true) {
-            $value === null => null,
-            str_starts_with($value, 'data:') => base64_decode(substr($value, strpos($value, ',') + 1), true),
-            // An allowed URL; redirects are not followed, so it cannot lead elsewhere.
-            default => @file_get_contents($value, false, stream_context_create([
-                'http' => ['timeout' => 10, 'follow_location' => 0],
-            ])),
-        };
-
-        if (! is_string($bytes) || $bytes === '' || @getimagesizefromstring($bytes) === false) {
+        if ($bytes === null) {
             return null;
         }
 
