@@ -160,7 +160,11 @@ class DocxTemplateFiller
             default => '',
         };
 
-        return $doc->numerals === Numerals::ARABIC ? Numerals::toArabic($text) : $text;
+        $text = $doc->numerals === Numerals::ARABIC ? Numerals::toArabic($text) : $text;
+
+        // A value must not add placeholders that later values would fill:
+        // a word joiner (invisible) keeps "${name}" in the text as written.
+        return str_replace('${', "\$\u{2060}{", $text);
     }
 
     private function isImage(mixed $value): bool
