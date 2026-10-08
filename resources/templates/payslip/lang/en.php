@@ -1,0 +1,45 @@
+<?php
+
+return [
+    'title' => 'Payslip',
+    'period' => 'For :month',
+    'number' => 'Payslip no.',
+    'employee' => [
+        'name' => 'Employee',
+        'code' => 'Employee ID',
+        'job_title' => 'Job title',
+        'department' => 'Department',
+        'national_id' => 'National ID',
+        'hire_date' => 'Hire date',
+        'bank_account' => 'Bank account',
+    ],
+    'earnings' => 'Earnings',
+    'deductions' => 'Deductions',
+    'amount' => 'Amount',
+    'total_earnings' => 'Total earnings',
+    'total_deductions' => 'Total deductions',
+    'net' => 'Net pay',
+    'attendance' => [
+        'working_days' => 'Working days',
+        'present_days' => 'Days present',
+        'absent_days' => 'Days absent',
+        'leave_days' => 'Leave days',
+        'overtime_hours' => 'Overtime hours',
+    ],
+    'payment_method' => 'Paid by',
+    'payment_date' => 'Pay date',
+    'methods' => [
+        'bank' => 'Bank transfer',
+        'cash' => 'Cash',
+        'cheque' => 'Cheque',
+    ],
+    'notes' => 'Notes',
+    'signatures' => [
+        'accountant' => 'Accountant',
+        'hr' => 'Human resources',
+        'employee' => 'Received by employee',
+    ],
+    'confidential' => 'Confidential',
+    'page' => 'Page',
+    'of' => 'of',
+];
