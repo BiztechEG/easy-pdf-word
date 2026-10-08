@@ -10,18 +10,21 @@ use InvalidArgumentException;
  */
 class FontRegistry
 {
-    /** @var array<string, array{regular: string, bold?: string, italic?: string, bold_italic?: string, arabic?: bool}> */
+    /** @var array<string, array{regular: string, bold?: string, italic?: string, bold_italic?: string, arabic?: bool, arabic_separators?: bool}> */
     private array $fonts = [];
 
     public function __construct(array $custom = [])
     {
         $dir = dirname(__DIR__, 2).'/resources/fonts';
 
-        foreach (['cairo' => 'Cairo', 'tajawal' => 'Tajawal', 'naskh' => 'NotoNaskhArabic'] as $name => $file) {
+        // Only Naskh draws the Arabic separators (٫ ٬) distinctly: Cairo's look
+        // like two commas and Tajawal has none, so those keep "," and ".".
+        foreach (['cairo' => ['Cairo', false], 'tajawal' => ['Tajawal', false], 'naskh' => ['NotoNaskhArabic', true]] as $name => [$file, $separators]) {
             $this->register($name, [
                 'regular' => "{$dir}/{$file}-Regular.ttf",
                 'bold' => "{$dir}/{$file}-Bold.ttf",
                 'arabic' => true,
+                'arabic_separators' => $separators,
             ]);
         }
 
@@ -50,6 +53,15 @@ class FontRegistry
     {
         return $this->fonts[strtolower($name)]
             ?? throw new InvalidArgumentException("Font [{$name}] is not registered.");
+    }
+
+    /**
+     * Whether the font has the Arabic decimal and thousands separators (٫ ٬),
+     * used with Arabic digits. Custom fonts opt in with "arabic_separators".
+     */
+    public function hasArabicSeparators(string $name): bool
+    {
+        return $this->has($name) && ! empty($this->get($name)['arabic_separators']);
     }
 
     public function supportsArabic(string $name): bool

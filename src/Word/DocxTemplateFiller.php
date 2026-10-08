@@ -161,7 +161,7 @@ class DocxTemplateFiller
             default => '',
         };
 
-        $text = $doc->numerals === Numerals::ARABIC ? Numerals::toArabic($text) : $text;
+        $text = $doc->numerals === Numerals::ARABIC ? Numerals::toArabic($text, separators: false) : $text;
 
         // A value must not add placeholders that later values would fill:
         // a word joiner (invisible) keeps "${name}" in the text as written.

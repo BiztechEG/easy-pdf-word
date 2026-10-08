@@ -23,4 +23,12 @@ class NumeralsTest extends TestCase
             Numerals::convertHtml($html, 'arabic')
         );
     }
+
+    public function test_arabic_digits_use_the_arabic_separators(): void
+    {
+        $this->assertSame('١٢٬٥٠٠٫٧٥', Numerals::toArabic('12,500.75'));
+        $this->assertSame('١٢,٥٠٠.٧٥', Numerals::toArabic('12,500.75', separators: false));
+        $this->assertSame('القيمة: ١٢٬٥٠٠. شكراً, ٢٠٢٦/١٠/٠٨', Numerals::toArabic('القيمة: 12,500. شكراً, 2026/10/08'));
+        $this->assertSame('12,500.75', Numerals::toLatin('١٢٬٥٠٠٫٧٥'));
+    }
 }

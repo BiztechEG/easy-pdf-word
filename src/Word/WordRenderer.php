@@ -372,7 +372,8 @@ class WordRenderer
      */
     private function text(string $text, bool $ltr = false): string
     {
-        $text = $this->numerals === Numerals::ARABIC ? Numerals::toArabic($text) : $text;
+        // Word picks the font on the reader's machine, so the separators stay "," and ".".
+        $text = $this->numerals === Numerals::ARABIC ? Numerals::toArabic($text, separators: false) : $text;
 
         if (! $this->rtl) {
             return $text;
