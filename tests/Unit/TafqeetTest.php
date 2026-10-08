@@ -118,6 +118,17 @@ class TafqeetTest extends TestCase
         $this->assertSame('مليونا جنيه', Tafqeet::amount(2000000, 'EGP'));
     }
 
+    public function test_round_thousands_before_a_noun_drop_the_tanween(): void
+    {
+        $this->assertSame('خمسة وعشرون ألفاً', Tafqeet::words(25000));
+        $this->assertSame('خمسة وعشرون ألف جنيه', Tafqeet::amount(25000, 'EGP'));
+        $this->assertSame('أحد عشر ألف ريال', Tafqeet::amount(11000, 'SAR'));
+        $this->assertSame('مائة وأحد عشر ألف ريال', Tafqeet::amount(111000, 'SAR'));
+        $this->assertSame('خمسة عشر مليون جنيه', Tafqeet::amount(15000000, 'EGP'));
+        $this->assertSame('خمسة وعشرون ألفاً وخمسمائة جنيه', Tafqeet::amount(25500, 'EGP'));
+        $this->assertSame('فقط خمسة وعشرون ألف جنيه وخمسون قرشاً لا غير', Tafqeet::amount(25000.5, 'EGP', true));
+    }
+
     public function test_invalid_and_too_large_numbers_throw(): void
     {
         foreach (['abc', '1000000000000000', 1e15] as $value) {

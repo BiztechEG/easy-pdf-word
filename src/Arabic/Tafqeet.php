@@ -178,11 +178,12 @@ class Tafqeet
     }
 
     /**
-     * Before a noun a final dual loses its "ن": مائتا جنيه، ألفا ريال، مائتا ألف.
+     * Before a noun a final dual loses its "ن" (مائتا جنيه، ألفا ريال، مائتا
+     * ألف) and a final thousand or million its tanween (خمسة وعشرون ألف جنيه).
      */
     private static function construct(string $words): string
     {
-        return preg_replace('/(مائتا|ألفا|مليونا|مليارا|تريليونا)ن$/u', '$1', $words) ?? $words;
+        return preg_replace(['/(مائتا|ألفا|مليونا|مليارا|تريليونا)ن$/u', '/(ألف|مليون|مليار|تريليون)اً$/u'], '$1', $words) ?? $words;
     }
 
     private static function nounForm(int $count, string $singular, string $plural, string $accusative): string
