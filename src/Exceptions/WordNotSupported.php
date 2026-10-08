@@ -8,7 +8,7 @@ class WordNotSupported extends LogicException
 {
     public static function forTemplate(string $name): self
     {
-        return new self("Template [{$name}] has no Word layout. Add word.php or word.docx to its folder.");
+        return new self("Template [{$name}] has no Word layout. Add layout.php, word.php or word.docx to its folder.");
     }
 
     public static function forSource(): self

@@ -1,5 +1,6 @@
 <?php
 
+use BiztechEG\EasyPdfWord\Support\Currency;
 use BiztechEG\EasyPdfWord\Zatca\ZatcaQr;
 
 /*
@@ -46,25 +47,27 @@ return [
         $data['seller'] = array_merge((array) ($theme['company'] ?? []), array_filter((array) ($data['seller'] ?? []), fn ($v) => $v !== null && $v !== ''));
 
         $rate = (float) ($data['invoice']['tax_rate'] ?? 0);
+        $decimals = Currency::decimals($data['invoice']['currency'] ?? null);
         $subtotal = $discount = 0.0;
 
+        // Each line is rounded, so the lines add up to the subtotal.
         foreach ($data['items'] as $i => $item) {
-            $gross = (float) $item['quantity'] * (float) $item['unit_price'];
-            $itemDiscount = (float) ($item['discount'] ?? 0);
-            $data['items'][$i]['total'] = round($gross - $itemDiscount, 2);
+            $gross = round((float) $item['quantity'] * (float) $item['unit_price'], $decimals);
+            $itemDiscount = round((float) ($item['discount'] ?? 0), $decimals);
+            $data['items'][$i]['total'] = round($gross - $itemDiscount, $decimals);
             $subtotal += $gross;
             $discount += $itemDiscount;
         }
 
         $taxable = $subtotal - $discount;
-        $tax = round($taxable * $rate / 100, 2);
+        $tax = round($taxable * $rate / 100, $decimals);
 
         $data['totals'] = [
-            'subtotal' => round($subtotal, 2),
-            'discount' => round($discount, 2),
-            'taxable' => round($taxable, 2),
+            'subtotal' => round($subtotal, $decimals),
+            'discount' => round($discount, $decimals),
+            'taxable' => round($taxable, $decimals),
             'tax' => $tax,
-            'total' => round($taxable + $tax, 2),
+            'total' => round($taxable + $tax, $decimals),
         ];
 
         if (($data['qr'] ?? null) === 'zatca') {

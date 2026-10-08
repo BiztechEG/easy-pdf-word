@@ -62,6 +62,12 @@ class BrowsershotDriver implements PdfDriver
             $browsershot->noSandbox();
         }
 
+        // Documents are static; without scripts, HTML that slipped into the
+        // data cannot make the browser request other pages or files.
+        if (empty($this->config['javascript'])) {
+            $browsershot->disableJavascript();
+        }
+
         return $browsershot->pdf();
     }
 

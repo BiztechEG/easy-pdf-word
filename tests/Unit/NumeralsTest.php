@@ -23,4 +23,19 @@ class NumeralsTest extends TestCase
             Numerals::convertHtml($html, 'arabic')
         );
     }
+
+    public function test_arabic_digits_use_the_arabic_separators(): void
+    {
+        $this->assertSame('١٢٬٥٠٠٫٧٥', Numerals::toArabic('12,500.75'));
+        $this->assertSame('١٢,٥٠٠.٧٥', Numerals::toArabic('12,500.75', separators: false));
+        $this->assertSame('القيمة: ١٢٬٥٠٠. شكراً, ٢٠٢٦/١٠/٠٨', Numerals::toArabic('القيمة: 12,500. شكراً, 2026/10/08'));
+        $this->assertSame('12,500.75', Numerals::toLatin('١٢٬٥٠٠٫٧٥'));
+    }
+
+    public function test_emails_and_links_keep_their_digits(): void
+    {
+        $this->assertSame('راسلنا على info@biz2tech.com أو ٠١٠٠', Numerals::toArabic('راسلنا على info@biz2tech.com أو 0100'));
+        $this->assertSame('الموقع https://site2.com/p/3 و www.x1.com رقم ٥', Numerals::toArabic('الموقع https://site2.com/p/3 و www.x1.com رقم 5'));
+        $this->assertSame('<p>info@a1.com ١٢</p>', Numerals::convertHtml('<p>info@a1.com 12</p>', 'arabic'));
+    }
 }

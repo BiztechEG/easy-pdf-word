@@ -2,6 +2,7 @@
 
 namespace BiztechEG\EasyPdfWord\Templates;
 
+use BiztechEG\EasyPdfWord\Support\Locale;
 use RuntimeException;
 
 /**
@@ -9,7 +10,8 @@ use RuntimeException;
  *
  *   template.php      name, description, fields (validation rules), defaults
  *   pdf.blade.php     the PDF layout
- *   word.php          optional Word layout: returns fn (DocumentBuilder $word, array $data, DocContext $doc)
+ *   layout.php        optional code layout for both formats: returns fn (DocumentBuilder $doc, array $data, DocContext $context)
+ *   word.php          optional Word layout, same shape; wins over layout.php for Word
  *   word.docx         optional Word file with ${placeholders}, designed in Word (wins over word.php)
  *   footer.blade.php  optional page footer, may use {page} and {pages}
  *   lang/{locale}.php optional labels, read in views with $doc->t('key')
@@ -112,18 +114,19 @@ class Template
         return is_file($this->path.'/pdf.blade.php');
     }
 
-    /** The word.php layout callback, if the template has one. */
+    /**
+     * The code layout for Word: word.php, or layout.php when one layout
+     * serves both formats.
+     */
     public function wordLayout(): ?callable
     {
-        $file = $this->path.'/word.php';
+        return $this->layout('word.php') ?? $this->layout('layout.php');
+    }
 
-        if (! is_file($file)) {
-            return null;
-        }
-
-        $layout = require $file;
-
-        return is_callable($layout) ? $layout : null;
+    /** The code layout for PDFs when there is no pdf.blade.php: layout.php, then word.php. */
+    public function pdfLayout(): ?callable
+    {
+        return $this->layout('layout.php') ?? $this->layout('word.php');
     }
 
     public function wordFile(): ?string
@@ -133,12 +136,28 @@ class Template
 
     public function supportsWord(): bool
     {
-        return $this->wordFile() !== null || is_file($this->path.'/word.php');
+        return $this->wordFile() !== null || $this->hasLayout();
     }
 
     public function supportsPdf(): bool
     {
-        return $this->hasPdfView() || is_file($this->path.'/word.php');
+        return $this->hasPdfView() || $this->hasLayout();
+    }
+
+    private function hasLayout(): bool
+    {
+        return is_file($this->path.'/layout.php') || is_file($this->path.'/word.php');
+    }
+
+    private function layout(string $file): ?callable
+    {
+        if (! is_file($this->path.'/'.$file)) {
+            return null;
+        }
+
+        $layout = require $this->path.'/'.$file;
+
+        return is_callable($layout) ? $layout : null;
     }
 
     public function footerView(): ?string
@@ -153,7 +172,11 @@ class Template
 
     public function translations(string $locale): array
     {
-        $language = strtolower(preg_split('/[-_]/', $locale)[0]);
+        $language = Locale::language($locale);
+
+        if ($language === null) {
+            return [];
+        }
 
         if (! array_key_exists($language, $this->translations)) {
             $file = $this->path."/lang/{$language}.php";

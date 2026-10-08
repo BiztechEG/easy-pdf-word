@@ -17,24 +17,43 @@ class Numerals
     /** Persian digits, converted to latin or arabic on input. */
     private const PERSIAN_DIGITS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
 
-    public static function toArabic(string|int|float $value): string
+    /**
+     * Arabic-Indic digits. With $separators, a "." or "," between digits
+     * becomes the Arabic decimal or thousands separator (١٢٬٥٠٠٫٧٥), since a
+     * Latin point is hard to tell from ٠. Turn it off for fonts without them.
+     */
+    public static function toArabic(string|int|float $value, bool $separators = true): string
     {
-        return str_replace(self::LATIN_DIGITS, self::ARABIC_DIGITS, self::toLatin($value));
+        // E-mail addresses and links keep their digits: info@biz2tech.com, www.site2.com/p/3.
+        $parts = preg_split('/([^\s@<>()]+@[^\s@<>()]+\.\w+|(?:https?:\/\/|www\.)[^\s<>]+)/iu', self::toLatin($value), -1, PREG_SPLIT_DELIM_CAPTURE);
+
+        foreach ($parts as $i => $part) {
+            if ($i % 2 === 1) {
+                continue;
+            }
+
+            $part = str_replace(self::LATIN_DIGITS, self::ARABIC_DIGITS, $part);
+            $parts[$i] = $separators
+                ? preg_replace_callback('/(?<=[٠-٩])[.,](?=[٠-٩])/u', fn ($m) => $m[0] === '.' ? '٫' : '٬', $part) ?? $part
+                : $part;
+        }
+
+        return implode('', $parts);
     }
 
     public static function toLatin(string|int|float $value): string
     {
         return str_replace(
-            [...self::ARABIC_DIGITS, ...self::PERSIAN_DIGITS],
-            [...self::LATIN_DIGITS, ...self::LATIN_DIGITS],
+            [...self::ARABIC_DIGITS, ...self::PERSIAN_DIGITS, '٫', '٬'],
+            [...self::LATIN_DIGITS, ...self::LATIN_DIGITS, '.', ','],
             (string) $value
         );
     }
 
-    public static function convert(string|int|float $value, string $style): string
+    public static function convert(string|int|float $value, string $style, bool $separators = true): string
     {
         return match (self::normalizeStyle($style)) {
-            self::ARABIC => self::toArabic($value),
+            self::ARABIC => self::toArabic($value, $separators),
             default => self::toLatin($value),
         };
     }
@@ -44,7 +63,7 @@ class Numerals
      * values, <style> and <script> contents are left untouched so CSS sizes,
      * colours and URLs keep working.
      */
-    public static function convertHtml(string $html, string $style): string
+    public static function convertHtml(string $html, string $style, bool $separators = true): string
     {
         $style = self::normalizeStyle($style);
 
@@ -63,7 +82,7 @@ class Numerals
             // Leave HTML entities such as &#123; alone.
             $parts[$i] = preg_replace_callback(
                 '/&#?\w+;|[^&]+|&/u',
-                fn ($m) => $m[0][0] === '&' && strlen($m[0]) > 1 ? $m[0] : self::convert($m[0], $style),
+                fn ($m) => $m[0][0] === '&' && strlen($m[0]) > 1 ? $m[0] : self::convert($m[0], $style, $separators),
                 $part
             );
         }

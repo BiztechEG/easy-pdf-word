@@ -72,7 +72,7 @@ class Tafqeet
             'subunits' => 100,
         ],
         'EUR' => [
-            'main' => ['forms' => ['يورو', 'يورو', 'يورو', 'يورو'], 'gender' => 'm'],
+            'main' => ['forms' => ['يورو', 'يوروان', 'يورو', 'يورو'], 'gender' => 'm'],
             'sub' => ['forms' => ['سنت', 'سنتان', 'سنتات', 'سنتاً'], 'gender' => 'm'],
             'subunits' => 100,
         ],
@@ -98,6 +98,14 @@ class Tafqeet
         return array_keys(self::$currencies);
     }
 
+    /** Decimal places of a known currency (3 for KWD), or null. */
+    public static function decimals(string $currency): ?int
+    {
+        $definition = self::$currencies[strtoupper($currency)] ?? null;
+
+        return $definition ? (int) round(log10($definition['subunits'])) : null;
+    }
+
     /**
      * The number in Arabic words. Decimals are read after "فاصلة", with
      * leading zeros spoken: 1.05 is "واحد فاصلة صفر خمسة".
@@ -107,6 +115,10 @@ class Tafqeet
         [$negative, $integer, $fraction] = self::split(self::toString($number));
 
         $text = self::integerWords($integer, $gender);
+
+        if (strlen($fraction) > strlen((string) self::MAX)) {
+            throw new InvalidArgumentException("[{$number}] has too many decimals to read in words.");
+        }
 
         if ($fraction !== '') {
             $digits = ltrim($fraction, '0');
@@ -178,11 +190,12 @@ class Tafqeet
     }
 
     /**
-     * Before a noun a final dual loses its "ن": مائتا جنيه، ألفا ريال، مائتا ألف.
+     * Before a noun a final dual loses its "ن" (مائتا جنيه، ألفا ريال، مائتا
+     * ألف) and a final thousand or million its tanween (خمسة وعشرون ألف جنيه).
      */
     private static function construct(string $words): string
     {
-        return preg_replace('/(مائتا|ألفا|مليونا|مليارا|تريليونا)ن$/u', '$1', $words) ?? $words;
+        return preg_replace(['/(مائتا|ألفا|مليونا|مليارا|تريليونا)ن$/u', '/(ألف|مليون|مليار|تريليون)اً$/u'], '$1', $words) ?? $words;
     }
 
     private static function nounForm(int $count, string $singular, string $plural, string $accusative): string

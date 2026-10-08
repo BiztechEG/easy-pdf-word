@@ -59,6 +59,8 @@ class TafqeetTest extends TestCase
             [0.5, 'EGP', 'خمسون قرشاً'],
             [0, 'EGP', 'صفر جنيه'],
             [100, 'USD', 'مائة دولار'],
+            [2.02, 'EUR', 'يوروان وسنتان'],
+            [5, 'EUR', 'خمسة يورو'],
             [1234.567, 'KWD', 'ألف ومائتان وأربعة وثلاثون ديناراً وخمسمائة وسبعة وستون فلساً'],
             ['1,500.25', 'AED', 'ألف وخمسمائة درهم وخمسة وعشرون فلساً'],
             ['١٢٣٫٤٥', 'AED', 'مائة وثلاثة وعشرون درهماً وخمسة وأربعون فلساً'],
@@ -116,6 +118,29 @@ class TafqeetTest extends TestCase
         $this->assertSame('ألفا جنيه', Tafqeet::amount(2000, 'EGP'));
         $this->assertSame('ألف ومائتا ريال', Tafqeet::amount(1200, 'SAR'));
         $this->assertSame('مليونا جنيه', Tafqeet::amount(2000000, 'EGP'));
+    }
+
+    public function test_round_thousands_before_a_noun_drop_the_tanween(): void
+    {
+        $this->assertSame('خمسة وعشرون ألفاً', Tafqeet::words(25000));
+        $this->assertSame('خمسة وعشرون ألف جنيه', Tafqeet::amount(25000, 'EGP'));
+        $this->assertSame('أحد عشر ألف ريال', Tafqeet::amount(11000, 'SAR'));
+        $this->assertSame('مائة وأحد عشر ألف ريال', Tafqeet::amount(111000, 'SAR'));
+        $this->assertSame('خمسة عشر مليون جنيه', Tafqeet::amount(15000000, 'EGP'));
+        $this->assertSame('خمسة وعشرون ألفاً وخمسمائة جنيه', Tafqeet::amount(25500, 'EGP'));
+        $this->assertSame('فقط خمسة وعشرون ألف جنيه وخمسون قرشاً لا غير', Tafqeet::amount(25000.5, 'EGP', true));
+    }
+
+    public function test_numbers_with_too_many_decimals_throw(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        Tafqeet::words('0.1234567890123456');
+    }
+
+    public function test_long_decimals_are_rounded_in_amounts(): void
+    {
+        $this->assertSame('جنيه واحد وثلاثة عشر قرشاً', Tafqeet::amount('1.1250000000000000001', 'EGP'));
     }
 
     public function test_invalid_and_too_large_numbers_throw(): void

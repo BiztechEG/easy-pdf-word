@@ -21,7 +21,7 @@ namespace BiztechEG\EasyPdfWord\Builder;
  * A table cell is a string, or an array with "text" (or "lines" for several
  * paragraphs, "image" for a picture, "qr" for a QR code) plus any text
  * style, "colspan" and "border" (#hex, a box around the cell). A line can
- * be a string, a styled run, or ['image' => $path, 'width' => 30].
+ * be a string, a styled run, a list of runs, or ['image' => $path, 'width' => 30].
  */
 class DocumentBuilder
 {

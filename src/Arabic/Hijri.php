@@ -35,7 +35,8 @@ class Hijri
             'ar@calendar=islamic-umalqura;numbers=latn',
             IntlDateFormatter::NONE,
             IntlDateFormatter::NONE,
-            $date->getTimezone(),
+            // ICU does not know zones written as "Z" or "+03:00"; the offset works for every date.
+            'GMT'.$date->format('P'),
             IntlDateFormatter::TRADITIONAL,
             $pattern,
         );

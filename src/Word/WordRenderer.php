@@ -6,6 +6,7 @@ use BiztechEG\EasyPdfWord\Arabic\Numerals;
 use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
 use BiztechEG\EasyPdfWord\Exceptions\DriverNotAvailable;
 use BiztechEG\EasyPdfWord\Pdf\PdfOptions;
+use BiztechEG\EasyPdfWord\Support\Color;
 use BiztechEG\EasyPdfWord\Support\DocContext;
 use BiztechEG\EasyPdfWord\Support\Qr;
 use PhpOffice\PhpWord\Element\AbstractContainer;
@@ -215,12 +216,12 @@ class WordRenderer
                     $cellStyle['gridSpan'] = $span;
                 }
 
-                if ($background) {
-                    $cellStyle['bgColor'] = $this->color($background);
+                if ($background = $this->color($background)) {
+                    $cellStyle['bgColor'] = $background;
                 }
 
-                if (! empty($cell['border'])) {
-                    $cellStyle += ['borderSize' => 6, 'borderColor' => $this->color($cell['border'])];
+                if ($borderColor = $this->color($cell['border'] ?? null)) {
+                    $cellStyle += ['borderSize' => 6, 'borderColor' => $borderColor];
                 }
 
                 $wordCell = $table->addCell((int) $cellWidth, $cellStyle);
@@ -256,7 +257,11 @@ class WordRenderer
                 continue;
             }
 
-            $runs = is_array($line) ? [$line] : [['text' => (string) $line]];
+            $runs = match (true) {
+                is_array($line) && array_is_list($line) => array_map(fn ($run) => is_array($run) ? $run : ['text' => (string) $run], $line),
+                is_array($line) => [$line],
+                default => [['text' => (string) $line]],
+            };
             $this->paragraph($cell, $runs, isset($line['align']) ? ['align' => $line['align']] + $paragraphStyle : $paragraphStyle);
         }
     }
@@ -271,9 +276,15 @@ class WordRenderer
             $source = base64_decode(substr($source, strpos($source, ',') + 1));
         }
 
+        // An image paragraph is not marked right to left, so "start" and
+        // "end" are given as the physical side.
         $container->addImage($source, [
             'width' => round($widthMm * self::POINTS_PER_MM),
-            'alignment' => $this->alignment($align),
+            'alignment' => match ($align) {
+                'center' => Jc::CENTER,
+                'end' => $this->rtl ? Jc::LEFT : Jc::RIGHT,
+                default => $this->rtl ? Jc::RIGHT : Jc::LEFT,
+            },
         ]);
     }
 
@@ -282,6 +293,8 @@ class WordRenderer
      */
     private function pageText(AbstractContainer $container, string $html): void
     {
+        // <bdo dir="ltr"> values ($doc->ltr()) keep their order as left-to-right overrides.
+        $html = preg_replace('/<bdo dir="ltr">(.*?)<\/bdo>/is', "\u{202D}\$1\u{202C}", $html) ?? $html;
         $text = trim(html_entity_decode(strip_tags(preg_replace('/<(br|\/p|\/div|\/tr)\b[^>]*>/i', "\n", $html)), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
         $text = preg_replace('/[ \t]+/u', ' ', $text);
         $text = preg_replace('/\s*\n\s*/u', '   ', $text);
@@ -353,22 +366,24 @@ class WordRenderer
 
     /**
      * Digits per the numerals setting. In right-to-left documents an "ltr"
-     * run and a negative number are wrapped in a left-to-right embedding,
-     * so Word shows "-2.3", not "2.3-".
+     * run and a negative number are wrapped in a left-to-right override, so
+     * Word shows "-2.3", not "2.3-", and keeps INV-٢٠٢٦-١٠٢٤ in order (an
+     * embedding is not enough for Arabic-Indic digits).
      */
     private function text(string $text, bool $ltr = false): string
     {
-        $text = $this->numerals === Numerals::ARABIC ? Numerals::toArabic($text) : $text;
+        // Word picks the font on the reader's machine, so the separators stay "," and ".".
+        $text = $this->numerals === Numerals::ARABIC ? Numerals::toArabic($text, separators: false) : $text;
 
         if (! $this->rtl) {
             return $text;
         }
 
         if ($ltr) {
-            return "\u{202A}".$text."\u{202C}";
+            return "\u{202D}".$text."\u{202C}";
         }
 
-        return preg_replace('/(?<![\p{L}\p{N}])- ?[\d٠-٩][\d٠-٩.,٫٬]*/u', "\u{202A}\$0\u{202C}", $text) ?? $text;
+        return preg_replace('/(?<![\p{L}\p{N}])(?<![\p{N}] )- ?[\d٠-٩][\d٠-٩.,٫٬]*/u', "\u{202D}\$0\u{202C}", $text) ?? $text;
     }
 
     /** ar-EG for an "ar_EG" document, ar-SA for plain "ar". */
@@ -389,9 +404,9 @@ class WordRenderer
         };
     }
 
-    private function color(?string $color): ?string
+    private function color(mixed $color): ?string
     {
-        return $color === null ? null : strtoupper(ltrim($color, '#'));
+        return Color::hex($color);
     }
 
     private function sectionStyle(PdfOptions $options): array

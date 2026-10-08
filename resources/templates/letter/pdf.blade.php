@@ -42,7 +42,7 @@
                         <tr><td class="label">{{ $doc->t('reference') }}</td><td>{{ $reference }}</td></tr>
                     @endif
                     <tr><td class="label">{{ $doc->t('date') }}</td><td>{{ $date->format('Y/m/d') }}</td></tr>
-                    @if ($show_hijri && $doc->isRtl() && $doc->hasHijri())
+                    @if (($show_hijri ?? true) && $doc->isRtl() && $doc->hasHijri())
                         <tr><td class="label">{{ $doc->t('hijri') }}</td><td>{{ $doc->hijri($date) }}</td></tr>
                     @endif
                 </table>

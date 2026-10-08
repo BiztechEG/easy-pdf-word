@@ -17,6 +17,7 @@ return function (DocumentBuilder $word, array $data, DocContext $doc): void {
     $muted = $doc->theme('muted', '#6B7280');
     $border = $doc->theme('border', '#E5E7EB');
     $currency = $invoice['currency'];
+    $decimals = $doc->decimals($currency);
     $currencyLabel = $doc->t('currencies.'.$currency) === 'currencies.'.$currency ? $currency : $doc->t('currencies.'.$currency);
     $date = fn ($value) => Carbon::parse($value)->format('Y/m/d');
     $label = fn (string $text) => ['text' => $text, 'color' => $muted];
@@ -30,7 +31,7 @@ return function (DocumentBuilder $word, array $data, DocContext $doc): void {
 
     $meta = [
         ['text' => $doc->t('title'), 'bold' => true, 'size' => 20, 'color' => $primary],
-        ['text' => $doc->t('number').': '.$invoice['number']],
+        [$doc->t('number').': ', ['text' => (string) $invoice['number'], 'ltr' => true]],
         ['text' => $doc->t('date').': '.$date($invoice['date'])],
     ];
 
@@ -69,11 +70,11 @@ return function (DocumentBuilder $word, array $data, DocContext $doc): void {
         }
 
         if (! empty($party['tax_number'])) {
-            $lines[] = $doc->t('tax_number').': '.$party['tax_number'];
+            $lines[] = [$doc->t('tax_number').': ', ['text' => (string) $party['tax_number'], 'ltr' => true]];
         }
 
         if (! empty($party['commercial_register'])) {
-            $lines[] = $doc->t('commercial_register').': '.$party['commercial_register'];
+            $lines[] = [$doc->t('commercial_register').': ', ['text' => (string) $party['commercial_register'], 'ltr' => true]];
         }
 
         return ['lines' => $lines, 'border' => $border];
@@ -98,9 +99,9 @@ return function (DocumentBuilder $word, array $data, DocContext $doc): void {
             (string) ($i + 1),
             $item['description'],
             $doc->numberText($quantity, floor($quantity) == $quantity ? 0 : 2),
-            $doc->numberText($item['unit_price']),
-            ! empty($item['discount']) ? $doc->numberText($item['discount']) : '-',
-            $doc->numberText($item['total']),
+            $doc->numberText($item['unit_price'], $decimals),
+            ! empty($item['discount']) ? $doc->numberText($item['discount'], $decimals) : '-',
+            $doc->numberText($item['total'], $decimals),
         ];
     }
 
@@ -112,16 +113,16 @@ return function (DocumentBuilder $word, array $data, DocContext $doc): void {
     ]);
 
     // Totals, then the QR code.
-    $totalRows = [['', $doc->t('subtotal'), $doc->numberText($totals['subtotal'])]];
+    $totalRows = [['', $doc->t('subtotal'), $doc->numberText($totals['subtotal'], $decimals)]];
 
     if ($totals['discount'] > 0) {
-        $totalRows[] = ['', $doc->t('discount'), '-'.$doc->numberText($totals['discount'])];
+        $totalRows[] = ['', $doc->t('discount'), '-'.$doc->numberText($totals['discount'], $decimals)];
     }
 
-    $totalRows[] = ['', $doc->t('vat', ['rate' => $doc->numberText($invoice['tax_rate'], 0)]), $doc->numberText($totals['tax'])];
+    $totalRows[] = ['', $doc->t('vat', ['rate' => $doc->rate($invoice['tax_rate'])]), $doc->numberText($totals['tax'], $decimals)];
 
     $grand = ['bold' => true, 'size' => 11.5, 'color' => '#FFFFFF', 'background' => $primary];
-    $totalRows[] = ['', ['text' => $doc->t('total')] + $grand, ['text' => $doc->numberText($totals['total']).' '.$currencyLabel] + $grand];
+    $totalRows[] = ['', ['text' => $doc->t('total')] + $grand, ['text' => $doc->numberText($totals['total'], $decimals).' '.$currencyLabel] + $grand];
 
     $word->table($totalRows, ['columns' => [52, 28, ['width' => 20, 'align' => 'end']], 'borders' => false, 'font_size' => 10]);
 
