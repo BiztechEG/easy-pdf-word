@@ -126,7 +126,8 @@ class Tafqeet
             $text .= ' فاصلة '.implode(' ', [...$zeros, self::integerWords((int) $digits, $gender)]);
         }
 
-        return $negative ? 'سالب '.$text : $text;
+        // "-0" is zero, not "سالب صفر".
+        return $negative && ($integer > 0 || trim($fraction, '0') !== '') ? 'سالب '.$text : $text;
     }
 
     /**

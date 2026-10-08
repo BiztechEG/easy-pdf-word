@@ -131,6 +131,13 @@ class TafqeetTest extends TestCase
         $this->assertSame('فقط خمسة وعشرون ألف جنيه وخمسون قرشاً لا غير', Tafqeet::amount(25000.5, 'EGP', true));
     }
 
+    public function test_minus_zero_is_zero(): void
+    {
+        $this->assertSame('صفر', Tafqeet::words('-0'));
+        $this->assertSame('صفر', Tafqeet::words(-0.0));
+        $this->assertStringStartsWith('سالب صفر فاصلة', Tafqeet::words(-0.5));
+    }
+
     public function test_numbers_with_too_many_decimals_throw(): void
     {
         $this->expectException(InvalidArgumentException::class);
