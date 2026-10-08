@@ -2,6 +2,7 @@
 
 namespace BiztechEG\EasyPdfWord\Pdf\Drivers;
 
+use BiztechEG\EasyPdfWord\Arabic\Numerals;
 use BiztechEG\EasyPdfWord\Contracts\PdfDriver;
 use BiztechEG\EasyPdfWord\Exceptions\DriverNotAvailable;
 use BiztechEG\EasyPdfWord\Fonts\FontRegistry;
@@ -92,6 +93,8 @@ class MpdfDriver implements PdfDriver
             'fontdata' => (new FontVariables)->getDefaults()['fontdata'] + $fontdata,
             'default_font' => strtolower($options->font),
             'directionality' => $options->direction,
+            // {page} and {pages} in the document's digits: ١، ٢، ٣ ...
+            'defaultPageNumStyle' => $options->numerals === Numerals::ARABIC ? 'arabic-indic' : '1',
             'autoScriptToLang' => true,
             // Off by default so font-family in the HTML is respected. Turn on
             // for documents mixing Arabic with scripts the main font lacks

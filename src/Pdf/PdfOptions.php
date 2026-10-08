@@ -25,6 +25,7 @@ class PdfOptions
         public ?string $footer = null,
         public ?string $title = null,
         public ?string $author = null,
+        public string $numerals = 'latin',
     ) {}
 
     public function isLandscape(): bool
