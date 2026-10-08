@@ -30,6 +30,19 @@ class ZatcaQrTest extends TestCase
         $this->assertStringStartsWith('data:image/png;base64,', $qr->toDataUri());
     }
 
+    public function test_a_date_alone_keeps_its_day_east_of_utc(): void
+    {
+        $zone = date_default_timezone_get();
+        date_default_timezone_set('Asia/Riyadh');
+
+        try {
+            $this->assertSame('2026-10-08T00:00:00Z', ZatcaQr::make('X', '3', '2026-10-08', 115, 15)->timestamp);
+            $this->assertSame('2026-10-08T09:00:00Z', ZatcaQr::make('X', '3', '2026-10-08 12:00', 115, 15)->timestamp);
+        } finally {
+            date_default_timezone_set($zone);
+        }
+    }
+
     public function test_fields_longer_than_255_bytes_are_rejected(): void
     {
         $this->expectException(\InvalidArgumentException::class);
