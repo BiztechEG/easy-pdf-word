@@ -58,13 +58,14 @@ class Template
 
     /**
      * Run the template's "prepare" callback, if any, to add computed values
-     * (totals, counts, ...) to the data before it reaches the view.
+     * (totals, counts, ...) to the data before it reaches the view. The
+     * callback also gets the document theme: fn (array $data, array $theme).
      */
-    public function prepare(array $data): array
+    public function prepare(array $data, array $theme = []): array
     {
         $prepare = $this->manifest['prepare'] ?? null;
 
-        return is_callable($prepare) ? $prepare($data) : $data;
+        return is_callable($prepare) ? $prepare($data, $theme) : $data;
     }
 
     /** Example data used by previews and tests. */

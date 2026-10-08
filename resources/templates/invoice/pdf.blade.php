@@ -1,5 +1,5 @@
 @php
-    $seller = array_merge((array) $doc->theme('company', []), $seller ?? []);
+    $seller = $seller ?? [];
     $primary = $doc->theme('primary', '#0F766E');
     $border = $doc->theme('border', '#E5E7EB');
     $currency = $invoice['currency'];

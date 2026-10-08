@@ -10,7 +10,7 @@ use Illuminate\Support\Carbon;
 
 return function (DocumentBuilder $word, array $data, DocContext $doc): void {
     $invoice = $data['invoice'];
-    $seller = array_merge((array) $doc->theme('company', []), $data['seller'] ?? []);
+    $seller = $data['seller'];
     $buyer = $data['buyer'];
     $totals = $data['totals'];
     $primary = $doc->theme('primary', '#0F766E');
