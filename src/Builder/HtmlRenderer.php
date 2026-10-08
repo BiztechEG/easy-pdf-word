@@ -44,7 +44,9 @@ class HtmlRenderer
         ];
 
         // A heading stays on the same page as the text after it.
-        return '<div style="'.$this->css($style, $doc).' margin: 0 0 3mm 0; page-break-after: avoid;">'.e($block['text']).'</div>';
+        $text = empty($style['ltr']) ? e($block['text']) : '<bdo dir="ltr">'.e($block['text']).'</bdo>';
+
+        return '<div style="'.$this->css($style, $doc).' margin: 0 0 3mm 0; page-break-after: avoid;">'.$text.'</div>';
     }
 
     private function paragraph(array $block, DocContext $doc): string
@@ -61,16 +63,17 @@ class HtmlRenderer
             $css .= ' line-height: '.(float) $style['line_height'].';';
         }
 
-        return '<p style="'.trim($css).'">'.$this->runs($block['runs'], $doc).'</p>';
+        return '<p style="'.trim($css).'">'.$this->runs($block['runs'], $doc, ! empty($style['ltr'])).'</p>';
     }
 
-    private function runs(array $runs, DocContext $doc): string
+    /** @param  bool  $ltr  the whole paragraph is left to right, as in the Word file */
+    private function runs(array $runs, DocContext $doc, bool $ltr = false): string
     {
         $html = '';
 
         foreach ($runs as $run) {
             $css = $this->css($run, $doc, withAlign: false);
-            $text = $this->text($run, $doc);
+            $text = $this->text($ltr ? ['ltr' => true] + $run : $run, $doc);
             $html .= $css === '' ? $text : '<span style="'.$css.'">'.$text.'</span>';
         }
 
