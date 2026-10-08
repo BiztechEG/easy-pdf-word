@@ -43,7 +43,8 @@ class HtmlRenderer
             'color' => $block['level'] === 1 ? $doc->theme('primary') : null,
         ];
 
-        return '<div style="'.$this->css($style, $doc).' margin: 0 0 3mm 0;">'.e($block['text']).'</div>';
+        // A heading stays on the same page as the text after it.
+        return '<div style="'.$this->css($style, $doc).' margin: 0 0 3mm 0; page-break-after: avoid;">'.e($block['text']).'</div>';
     }
 
     private function paragraph(array $block, DocContext $doc): string
