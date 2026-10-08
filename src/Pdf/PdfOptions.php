@@ -46,17 +46,27 @@ class PdfOptions
     {
         $size = is_array($this->paper)
             ? array_values($this->paper)
-            : (self::PAPER_SIZES[strtoupper($this->paper)] ?? self::PAPER_SIZES['A4']);
+            : (self::PAPER_SIZES[strtoupper($this->paper)] ?? throw self::unknownPaper($this->paper));
 
         return $this->isLandscape() ? [max($size), min($size)] : [min($size), max($size)];
     }
 
+    public static function unknownPaper(string $paper): \InvalidArgumentException
+    {
+        return new \InvalidArgumentException("Unknown paper size [{$paper}]. Use one of ".implode(', ', array_keys(self::PAPER_SIZES)).', or [width, height] in mm.');
+    }
+
     public const PAPER_SIZES = [
+        'A2' => [420, 594],
         'A3' => [297, 420],
         'A4' => [210, 297],
         'A5' => [148, 210],
         'A6' => [105, 148],
+        'B4' => [250, 353],
+        'B5' => [176, 250],
         'LETTER' => [215.9, 279.4],
         'LEGAL' => [215.9, 355.6],
+        'TABLOID' => [279.4, 431.8],
+        'EXECUTIVE' => [184.15, 266.7],
     ];
 }
