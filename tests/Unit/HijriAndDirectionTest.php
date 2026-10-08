@@ -17,6 +17,14 @@ class HijriAndDirectionTest extends TestCase
         $this->assertSame(['year' => 1448, 'month' => 4, 'day' => 27], Hijri::parts('2026-10-08'));
     }
 
+    public function test_hijri_dates_with_any_time_zone_notation(): void
+    {
+        // Eloquent's toArray() and toJSON() write dates as "...Z".
+        $this->assertSame('27 ربيع الآخر 1448 هـ', Hijri::format('2026-10-08T10:30:00.000000Z', numerals: 'latin'));
+        $this->assertSame('27 ربيع الآخر 1448 هـ', Hijri::format('2026-10-08T23:30:00+03:00', numerals: 'latin'));
+        $this->assertSame('27 ربيع الآخر 1448 هـ', Hijri::format(new \DateTimeImmutable('2026-10-08 12:00', new \DateTimeZone('Africa/Cairo')), numerals: 'latin'));
+    }
+
     public function test_direction_from_locale(): void
     {
         $this->assertSame('rtl', Direction::forLocale('ar'));
