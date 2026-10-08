@@ -2,6 +2,7 @@
 
 namespace BiztechEG\EasyPdfWord\Zatca;
 
+use BiztechEG\EasyPdfWord\Support\DocContext;
 use BiztechEG\EasyPdfWord\Support\Qr;
 use DateTimeInterface;
 use Illuminate\Support\Carbon;
@@ -42,8 +43,8 @@ class ZatcaQr
             $sellerName,
             $vatNumber,
             $time->utc()->format('Y-m-d\TH:i:s\Z'),
-            number_format((float) $total, 2, '.', ''),
-            number_format((float) $vatTotal, 2, '.', ''),
+            number_format(DocContext::toFloat($total), 2, '.', ''),
+            number_format(DocContext::toFloat($vatTotal), 2, '.', ''),
         );
     }
 

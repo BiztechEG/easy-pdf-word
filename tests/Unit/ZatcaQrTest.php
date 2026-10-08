@@ -43,6 +43,14 @@ class ZatcaQrTest extends TestCase
         }
     }
 
+    public function test_formatted_totals_are_read_whole(): void
+    {
+        $qr = ZatcaQr::make('X', '3', '2026-10-08', '1,150.00', '١٥٠');
+
+        $this->assertSame('1150.00', $qr->total);
+        $this->assertSame('150.00', $qr->vatTotal);
+    }
+
     public function test_fields_longer_than_255_bytes_are_rejected(): void
     {
         $this->expectException(\InvalidArgumentException::class);
