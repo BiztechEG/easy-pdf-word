@@ -4,6 +4,7 @@ namespace BiztechEG\EasyPdfWord\Support;
 
 use BiztechEG\EasyPdfWord\Arabic\Arabic;
 use BiztechEG\EasyPdfWord\Arabic\Numerals;
+use BiztechEG\EasyPdfWord\Arabic\Tafqeet;
 use Illuminate\Support\Arr;
 use Illuminate\Support\HtmlString;
 
@@ -99,9 +100,22 @@ class DocContext
         return new HtmlString($currency ? $amount.' '.e($currency) : $amount);
     }
 
+    /**
+     * The amount in Arabic words. For a currency Tafqeet does not know, the
+     * number is read in words followed by the code and the cents as a
+     * fraction: "فقط مائة وخمسون GBP و25/100 لا غير".
+     */
     public function tafqeet(int|float|string $amount, string $currency, bool $only = true): string
     {
-        return Arabic::tafqeet($amount, $currency, $only);
+        if (in_array(strtoupper($currency), Tafqeet::currencies(), true)) {
+            return Arabic::tafqeet($amount, $currency, $only);
+        }
+
+        $value = round((float) Numerals::toLatin(str_replace(',', '', (string) $amount)), 2);
+        $cents = (int) round(abs($value - (int) $value) * 100);
+        $text = Tafqeet::words((int) $value).' '.strtoupper($currency).($cents > 0 ? ' و'.$cents.'/100' : '');
+
+        return $only ? 'فقط '.$text.' لا غير' : $text;
     }
 
     public function hijri(mixed $date = null, string $pattern = 'd MMMM y'): string
