@@ -93,4 +93,40 @@ class TafqeetTest extends TestCase
 
         Tafqeet::amount(5, 'XXX');
     }
+
+    public function test_decimals_keep_leading_zeros(): void
+    {
+        $this->assertSame('واحد فاصلة صفر خمسة', Tafqeet::words(1.05));
+        $this->assertSame('واحد فاصلة خمسة', Tafqeet::words(1.5));
+        $this->assertSame('صفر فاصلة صفر صفر صفر صفر واحد', Tafqeet::words(1e-5));
+    }
+
+    public function test_thousands_ending_in_one_or_two(): void
+    {
+        $this->assertSame('مائة ألف وألف', Tafqeet::words(101000));
+        $this->assertSame('مائة ألف وألفان', Tafqeet::words(102000));
+        $this->assertSame('ثلاثمائة ألف وألف وخمسون', Tafqeet::words(301050));
+    }
+
+    public function test_duals_before_a_noun_drop_the_nun(): void
+    {
+        $this->assertSame('مائتان', Tafqeet::words(200));
+        $this->assertSame('مائتا ألف', Tafqeet::words(200000));
+        $this->assertSame('مائتا جنيه', Tafqeet::amount(200, 'EGP'));
+        $this->assertSame('ألفا جنيه', Tafqeet::amount(2000, 'EGP'));
+        $this->assertSame('ألف ومائتا ريال', Tafqeet::amount(1200, 'SAR'));
+        $this->assertSame('مليونا جنيه', Tafqeet::amount(2000000, 'EGP'));
+    }
+
+    public function test_invalid_and_too_large_numbers_throw(): void
+    {
+        foreach (['abc', '1000000000000000', 1e15] as $value) {
+            try {
+                Tafqeet::amount($value, 'EGP');
+                $this->fail("No exception for {$value}");
+            } catch (InvalidArgumentException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
 }

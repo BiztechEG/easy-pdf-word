@@ -21,6 +21,9 @@ class Tafqeet
 
     private const ONES_F = ['', 'واحدة', 'اثنتان', 'ثلاث', 'أربع', 'خمس', 'ست', 'سبع', 'ثماني', 'تسع', 'عشر'];
 
+    /** Largest number read: 999 trillion and change. */
+    public const MAX = 999_999_999_999_999;
+
     private const TENS = ['', 'عشرة', 'عشرون', 'ثلاثون', 'أربعون', 'خمسون', 'ستون', 'سبعون', 'ثمانون', 'تسعون'];
 
     private const HUNDREDS = ['', 'مائة', 'مائتان', 'ثلاثمائة', 'أربعمائة', 'خمسمائة', 'ستمائة', 'سبعمائة', 'ثمانمائة', 'تسعمائة'];
@@ -96,16 +99,19 @@ class Tafqeet
     }
 
     /**
-     * The number in Arabic words. Decimals are read after "فاصلة".
+     * The number in Arabic words. Decimals are read after "فاصلة", with
+     * leading zeros spoken: 1.05 is "واحد فاصلة صفر خمسة".
      */
     public static function words(int|float|string $number, string $gender = self::MASCULINE): string
     {
-        [$negative, $integer, $fraction] = self::split((string) $number);
+        [$negative, $integer, $fraction] = self::split(self::toString($number));
 
         $text = self::integerWords($integer, $gender);
 
         if ($fraction !== '') {
-            $text .= ' فاصلة '.self::integerWords((int) $fraction, $gender);
+            $digits = ltrim($fraction, '0');
+            $zeros = array_fill(0, strlen($fraction) - strlen($digits), 'صفر');
+            $text .= ' فاصلة '.implode(' ', [...$zeros, self::integerWords((int) $digits, $gender)]);
         }
 
         return $negative ? 'سالب '.$text : $text;
@@ -123,10 +129,11 @@ class Tafqeet
             ?? throw new InvalidArgumentException("Unknown currency [{$currency}]. Register it with Tafqeet::registerCurrency().");
 
         $decimals = (int) round(log10($definition['subunits']));
-        $normalized = number_format(abs((float) self::cleanNumber((string) $amount)), $decimals, '.', '');
+        [$negative] = self::split(self::toString($amount));
+        $normalized = number_format(abs((float) self::cleanNumber(self::toString($amount))), $decimals, '.', '');
         [, $integer, $fraction] = self::split($normalized);
         $fraction = (int) str_pad($fraction, $decimals, '0');
-        $negative = str_starts_with(trim(self::cleanNumber((string) $amount)), '-') && ($integer > 0 || $fraction > 0);
+        $negative = $negative && ($integer > 0 || $fraction > 0);
 
         $parts = [];
 
@@ -167,7 +174,15 @@ class Tafqeet
             return $dual;
         }
 
-        return self::integerWords($count, $gender).' '.self::nounForm($count, $singular, $plural, $accusative);
+        return self::construct(self::integerWords($count, $gender)).' '.self::nounForm($count, $singular, $plural, $accusative);
+    }
+
+    /**
+     * Before a noun a final dual loses its "ن": مائتا جنيه، ألفا ريال، مائتا ألف.
+     */
+    private static function construct(string $words): string
+    {
+        return preg_replace('/(مائتا|ألفا|مليونا|مليارا|تريليونا)ن$/u', '$1', $words) ?? $words;
     }
 
     private static function nounForm(int $count, string $singular, string $plural, string $accusative): string
@@ -197,10 +212,14 @@ class Tafqeet
                 continue;
             }
 
+            $lastTwo = $count % 100;
+
             $parts[] = match (true) {
                 $count === 1 => $forms[0],
                 $count === 2 => $forms[1],
-                default => self::belowThousand($count, self::MASCULINE).' '.self::nounForm($count, $forms[0], $forms[2], $forms[3]),
+                // 101,000 is "مائة ألف وألف", 102,000 "مائة ألف وألفان".
+                $count > 100 && ($lastTwo === 1 || $lastTwo === 2) => self::construct(self::belowThousand($count - $lastTwo, self::MASCULINE)).' '.$forms[0].' و'.$forms[$lastTwo - 1],
+                default => self::construct(self::belowThousand($count, self::MASCULINE)).' '.self::nounForm($count, $forms[0], $forms[2], $forms[3]),
             };
         }
 
@@ -272,9 +291,27 @@ class Tafqeet
             throw new InvalidArgumentException("[{$number}] is not a number.");
         }
 
+        $integer = ltrim($m[2], '0') ?: '0';
+
+        if (strlen($integer) > strlen((string) self::MAX)) {
+            throw new InvalidArgumentException("[{$number}] is too large to read in words (up to ".number_format(self::MAX).').');
+        }
+
         $fraction = rtrim($m[3] ?? '', '0');
 
-        return [$m[1] === '-', (int) $m[2], $fraction];
+        return [$m[1] === '-', (int) $integer, $fraction];
+    }
+
+    /** Floats in plain notation (1.0E+15 and 1.0E-5 are not readable). */
+    private static function toString(int|float|string $number): string
+    {
+        if (! is_float($number)) {
+            return (string) $number;
+        }
+
+        $text = (string) $number;
+
+        return str_contains($text, 'E') ? rtrim(rtrim(sprintf('%.10F', $number), '0'), '.') : $text;
     }
 
     private static function cleanNumber(string $number): string
