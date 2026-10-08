@@ -59,6 +59,12 @@ class DocContext
         return $line;
     }
 
+    /** All labels for the document's language, falling back to English. */
+    public function translations(): array
+    {
+        return array_replace_recursive($this->fallbackTranslations, $this->translations);
+    }
+
     /**
      * Keep a left-to-right value (phone, tax number, code, e-mail) in its
      * own order inside Arabic text, e.g. "+20 100 000 0000" or "123-456-789".
@@ -75,6 +81,15 @@ class DocContext
 
         // Keeps the minus sign before the digits in RTL text ("-2.3", not "2.3-").
         return new HtmlString(str_starts_with($formatted, '-') ? '<bdo dir="ltr">'.$formatted.'</bdo>' : $formatted);
+    }
+
+    /**
+     * The same formatting as number(), as plain text for Word documents
+     * (Word keeps the minus sign in place itself).
+     */
+    public function numberText(int|float|string|null $value, int $decimals = 2): string
+    {
+        return number_format((float) $value, $decimals);
     }
 
     public function money(int|float|string|null $value, ?string $currency = null, int $decimals = 2): HtmlString
