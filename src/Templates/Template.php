@@ -9,6 +9,8 @@ use RuntimeException;
  *
  *   template.php      name, description, fields (validation rules), defaults
  *   pdf.blade.php     the PDF layout
+ *   word.php          optional Word layout: returns fn (DocumentBuilder $word, array $data, DocContext $doc)
+ *   word.docx         optional Word file with ${placeholders}, designed in Word (wins over word.php)
  *   footer.blade.php  optional page footer, may use {page} and {pages}
  *   lang/{locale}.php optional labels, read in views with $doc->t('key')
  */
@@ -102,6 +104,40 @@ class Template
         }
 
         return $file;
+    }
+
+    public function hasPdfView(): bool
+    {
+        return is_file($this->path.'/pdf.blade.php');
+    }
+
+    /** The word.php layout callback, if the template has one. */
+    public function wordLayout(): ?callable
+    {
+        $file = $this->path.'/word.php';
+
+        if (! is_file($file)) {
+            return null;
+        }
+
+        $layout = require $file;
+
+        return is_callable($layout) ? $layout : null;
+    }
+
+    public function wordFile(): ?string
+    {
+        return is_file($this->path.'/word.docx') ? $this->path.'/word.docx' : null;
+    }
+
+    public function supportsWord(): bool
+    {
+        return $this->wordFile() !== null || is_file($this->path.'/word.php');
+    }
+
+    public function supportsPdf(): bool
+    {
+        return $this->hasPdfView() || is_file($this->path.'/word.php');
     }
 
     public function footerView(): ?string

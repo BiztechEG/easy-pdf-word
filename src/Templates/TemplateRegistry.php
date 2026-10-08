@@ -75,8 +75,10 @@ class TemplateRegistry
         }
 
         foreach ($this->paths as $base) {
-            if (is_file("{$base}/{$name}/template.php") || is_file("{$base}/{$name}/pdf.blade.php")) {
-                return "{$base}/{$name}";
+            foreach (['template.php', 'pdf.blade.php', 'word.php', 'word.docx'] as $file) {
+                if (is_file("{$base}/{$name}/{$file}")) {
+                    return "{$base}/{$name}";
+                }
             }
         }
 
