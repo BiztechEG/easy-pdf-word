@@ -2,6 +2,7 @@
 
 namespace BiztechEG\EasyPdfWord\Builder;
 
+use BiztechEG\EasyPdfWord\Support\Color;
 use BiztechEG\EasyPdfWord\Support\DocContext;
 use BiztechEG\EasyPdfWord\Support\Qr;
 
@@ -26,7 +27,7 @@ class HtmlRenderer
                 'qr' => $this->image(Qr::dataUri($block['value']), $block, $doc),
                 'spacer' => '<div style="height: '.(float) $block['height'].'mm;"></div>',
                 'pageBreak' => '<div style="page-break-before: always;"></div>',
-                'line' => '<hr style="border: 0; border-top: 1px solid '.e($block['color'] ?? $doc->theme('border', '#E5E7EB')).'; margin: 3mm 0;">',
+                'line' => '<hr style="border: 0; border-top: 1px solid '.Color::css($block['color'] ?? $doc->theme('border'), '#E5E7EB').'; margin: 3mm 0;">',
                 default => '',
             };
         }
@@ -103,8 +104,8 @@ class HtmlRenderer
                 }
 
                 $border = match (true) {
-                    ! empty($cell['border']) => 'border: 1px solid '.e($cell['border']).';',
-                    (bool) $options['borders'] => 'border-bottom: 1px solid '.e($options['border_color']).';',
+                    Color::isValid($cell['border'] ?? null) => 'border: 1px solid '.$cell['border'].';',
+                    (bool) $options['borders'] => 'border-bottom: 1px solid '.Color::css($options['border_color'], '#E5E7EB').';',
                     default => '',
                 };
                 $width = isset($column['width']) && $span === 1 ? 'width: '.(float) $column['width'].'%;' : '';
@@ -217,12 +218,12 @@ class HtmlRenderer
             $css[] = 'font-size: '.(float) $style['size'].'pt';
         }
 
-        if (! empty($style['color'])) {
-            $css[] = 'color: '.e($style['color']);
+        if ($color = Color::css($style['color'] ?? null)) {
+            $css[] = 'color: '.$color;
         }
 
-        if (! empty($style['background'])) {
-            $css[] = 'background-color: '.e($style['background']);
+        if ($background = Color::css($style['background'] ?? null)) {
+            $css[] = 'background-color: '.$background;
         }
 
         return $css === [] ? '' : implode('; ', $css).';';
