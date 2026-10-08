@@ -45,9 +45,11 @@ class DocxTemplateFiller
         Settings::setOutputEscapingEnabled(true);
 
         try {
-            $processor = new TemplateProcessor($path);
             $values = $this->flatten($data + ['theme' => $doc->theme, 't' => $doc->translations()]);
             $values += $this->extras($data, $doc);
+            $processor = new TemplateProcessor($path);
+            // PhpWord's working copy of the template, left behind if anything below throws.
+            $this->temporary[] = $processor->getTempDocumentFilename();
             $variables = $processor->getVariables();
 
             $this->fillRows($processor, $data, $variables, $doc);
