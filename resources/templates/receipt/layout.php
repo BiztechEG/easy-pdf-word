@@ -73,13 +73,14 @@ return function (DocumentBuilder $voucher, array $data, DocContext $doc): void {
         $voucher->paragraph($doc->t('notes').': '.$data['notes'], ['color' => $muted, 'size' => 9]);
     }
 
-    // Signature boxes.
+    // Signature boxes: known roles are translated, anything else is printed as it is.
+    $label = fn (string $who) => $doc->t('signature_labels.'.$who) === 'signature_labels.'.$who ? $who : $doc->t('signature_labels.'.$who);
     $voucher->spacer(6);
     $voucher->table([array_map(fn ($who) => [
         'lines' => [
-            ['text' => $doc->t('signature_labels.'.$who), 'bold' => true, 'align' => 'center'],
+            ['text' => $label($who), 'bold' => true, 'align' => 'center'],
             ['text' => ' ', 'size' => 22],
             ['text' => '....................', 'color' => $muted, 'align' => 'center'],
         ],
-    ], $data['signatures'])], ['borders' => false]);
+    ], array_values($data['signatures']))], ['borders' => false]);
 };
