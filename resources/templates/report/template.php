@@ -40,6 +40,7 @@ return [
         foreach ($data['columns'] as $key => $column) {
             $column = is_array($column) ? $column : ['key' => $key, 'label' => $column];
             $column['key'] ??= $key;
+            $column['label'] ??= (string) $column['key'];
             $column['format'] ??= null;
             $column['decimals'] ??= 2;
             $column['align'] ??= in_array($column['format'], ['number', 'money'], true) ? 'end' : 'start';
