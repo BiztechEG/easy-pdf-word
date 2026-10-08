@@ -85,6 +85,7 @@ class FontRegistry
     {
         $dirs = [];
         $fontdata = [];
+        $byName = [];
         $styles = ['regular' => 'R', 'bold' => 'B', 'italic' => 'I', 'bold_italic' => 'BI'];
 
         foreach ($this->fonts as $name => $files) {
@@ -92,8 +93,17 @@ class FontRegistry
 
             foreach ($styles as $style => $key) {
                 if (! empty($files[$style])) {
-                    $dirs[] = dirname($files[$style]);
-                    $entry[$key] = basename($files[$style]);
+                    $file = $files[$style];
+                    $known = $byName[basename($file)] ?? null;
+
+                    // mPDF would take the first folder holding a file of that name: the wrong font.
+                    if ($known !== null && (realpath($known) ?: $known) !== (realpath($file) ?: $file)) {
+                        throw new InvalidArgumentException("The font files [{$known}] and [{$file}] have the same name. mPDF finds fonts by file name, so rename one of them.");
+                    }
+
+                    $byName[basename($file)] = $file;
+                    $dirs[] = dirname($file);
+                    $entry[$key] = basename($file);
                 }
             }
 
