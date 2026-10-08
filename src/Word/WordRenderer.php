@@ -6,6 +6,7 @@ use BiztechEG\EasyPdfWord\Arabic\Numerals;
 use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
 use BiztechEG\EasyPdfWord\Exceptions\DriverNotAvailable;
 use BiztechEG\EasyPdfWord\Pdf\PdfOptions;
+use BiztechEG\EasyPdfWord\Support\Color;
 use BiztechEG\EasyPdfWord\Support\DocContext;
 use BiztechEG\EasyPdfWord\Support\Qr;
 use PhpOffice\PhpWord\Element\AbstractContainer;
@@ -215,12 +216,12 @@ class WordRenderer
                     $cellStyle['gridSpan'] = $span;
                 }
 
-                if ($background) {
-                    $cellStyle['bgColor'] = $this->color($background);
+                if ($background = $this->color($background)) {
+                    $cellStyle['bgColor'] = $background;
                 }
 
-                if (! empty($cell['border'])) {
-                    $cellStyle += ['borderSize' => 6, 'borderColor' => $this->color($cell['border'])];
+                if ($borderColor = $this->color($cell['border'] ?? null)) {
+                    $cellStyle += ['borderSize' => 6, 'borderColor' => $borderColor];
                 }
 
                 $wordCell = $table->addCell((int) $cellWidth, $cellStyle);
@@ -399,9 +400,9 @@ class WordRenderer
         };
     }
 
-    private function color(?string $color): ?string
+    private function color(mixed $color): ?string
     {
-        return $color === null ? null : strtoupper(ltrim($color, '#'));
+        return Color::hex($color);
     }
 
     private function sectionStyle(PdfOptions $options): array
