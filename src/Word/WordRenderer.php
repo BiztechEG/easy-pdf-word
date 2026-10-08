@@ -296,6 +296,8 @@ class WordRenderer
      */
     private function pageText(AbstractContainer $container, string $html): void
     {
+        // Styles and scripts are not text.
+        $html = preg_replace('/<(style|script|head|title)\b[^>]*>.*?<\/\1\s*>/is', '', $html) ?? $html;
         // <bdo dir="ltr"> values ($doc->ltr()) keep their order as left-to-right overrides.
         $html = preg_replace('/<bdo dir="ltr">(.*?)<\/bdo>/is', "\u{202D}\$1\u{202C}", $html) ?? $html;
         $text = trim(html_entity_decode(strip_tags(preg_replace('/<(br|\/p|\/div|\/tr)\b[^>]*>/i', "\n", $html)), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
