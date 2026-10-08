@@ -44,6 +44,22 @@ class FontRegistry
         return $this;
     }
 
+    /** Changes when a font is added, or a font file is replaced or edited. */
+    public function signature(): string
+    {
+        $files = [];
+
+        foreach ($this->fonts as $name => $font) {
+            foreach (['regular', 'bold', 'italic', 'bold_italic'] as $style) {
+                if (! empty($font[$style])) {
+                    $files[] = $name.'|'.$font[$style].'|'.@filesize($font[$style]).'|'.@filemtime($font[$style]);
+                }
+            }
+        }
+
+        return substr(md5(implode("\n", $files)), 0, 12);
+    }
+
     public function has(string $name): bool
     {
         return isset($this->fonts[strtolower($name)]);

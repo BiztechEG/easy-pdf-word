@@ -134,7 +134,10 @@ class MpdfDriver implements PdfDriver
 
         $arabicFont = $this->fonts->supportsArabic($options->font) ? strtolower($options->font) : 'cairo';
 
-        $tempDir = self::tempDir($this->config['temp_dir'] ?? null);
+        // mPDF caches what it reads from each font under its font name and only reads
+        // the file again when its size changes. A folder per version of the font
+        // files means a changed or replaced font is never drawn from a stale cache.
+        $tempDir = self::tempDir(self::tempDir($this->config['temp_dir'] ?? null).'/fonts-'.$this->fonts->signature());
 
         return [
             'mode' => 'utf-8',
