@@ -126,9 +126,7 @@ class HtmlRenderer
     private function cellContent(array $cell, DocContext $doc): string
     {
         if (! empty($cell['image'])) {
-            $src = $doc->image($cell['image']);
-
-            return $src ? '<img src="'.e($src).'" style="width: '.(float) ($cell['width'] ?? 30).'mm;">' : '';
+            return $this->cellImage($doc->image($cell['image']), $cell);
         }
 
         if (! empty($cell['qr'])) {
@@ -139,10 +137,15 @@ class HtmlRenderer
 
         return implode('<br>', array_map(fn ($line) => match (true) {
             is_array($line) && array_is_list($line) => implode('', array_map(fn ($run) => $this->line($run, $cell, $doc), $line)),
-            is_array($line) && ! empty($line['image']) => '<img src="'.e((string) $doc->image($line['image'])).'" style="width: '.(float) ($line['width'] ?? 30).'mm;">',
+            is_array($line) && ! empty($line['image']) => $this->cellImage($doc->image($line['image']), $line),
             is_array($line) && ! empty($line['align']) => '<div style="text-align: '.$this->align($line['align'], $doc).';'.$this->css($line, $doc, withAlign: false).'">'.$this->text($line, $doc).'</div>',
             default => $this->line($line, $cell, $doc),
         }, $lines));
+    }
+
+    private function cellImage(?string $src, array $style): string
+    {
+        return $src ? '<img src="'.e($src).'" style="width: '.(float) ($style['width'] ?? 30).'mm;">' : '';
     }
 
     /**
