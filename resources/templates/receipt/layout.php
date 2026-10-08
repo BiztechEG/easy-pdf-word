@@ -38,7 +38,7 @@ return function (DocumentBuilder $voucher, array $data, DocContext $doc): void {
     $voucher->table([[
         '',
         [
-            'text' => $doc->t('amount').': '.$doc->numberText($data['amount']).' '.$doc->currency($data['currency']),
+            'text' => $doc->t('amount').': '.$doc->numberText($data['amount'], $doc->decimals($data['currency'])).' '.$doc->currency($data['currency']),
             'bold' => true, 'size' => 14, 'align' => 'center', 'border' => $primary, 'background' => '#F0FDFA',
         ],
         '',

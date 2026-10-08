@@ -1,5 +1,7 @@
 <?php
 
+use BiztechEG\EasyPdfWord\Support\Currency;
+
 /*
 | Price quotation (عرض سعر): customer, items with optional details and units,
 | discount, optional VAT, validity date, terms and the sender's signature.
@@ -42,25 +44,27 @@ return [
 
     'prepare' => function (array $data): array {
         $rate = (float) ($data['quote']['tax_rate'] ?? 0);
+        $decimals = Currency::decimals($data['quote']['currency'] ?? null);
         $subtotal = $discount = 0.0;
 
+        // Each line is rounded, so the lines add up to the subtotal.
         foreach ($data['items'] as $i => $item) {
-            $gross = (float) $item['quantity'] * (float) $item['unit_price'];
-            $itemDiscount = (float) ($item['discount'] ?? 0);
-            $data['items'][$i]['total'] = round($gross - $itemDiscount, 2);
+            $gross = round((float) $item['quantity'] * (float) $item['unit_price'], $decimals);
+            $itemDiscount = round((float) ($item['discount'] ?? 0), $decimals);
+            $data['items'][$i]['total'] = round($gross - $itemDiscount, $decimals);
             $subtotal += $gross;
             $discount += $itemDiscount;
         }
 
         $net = $subtotal - $discount;
-        $tax = round($net * $rate / 100, 2);
+        $tax = round($net * $rate / 100, $decimals);
 
         $data['totals'] = [
-            'subtotal' => round($subtotal, 2),
-            'discount' => round($discount, 2),
-            'net' => round($net, 2),
+            'subtotal' => round($subtotal, $decimals),
+            'discount' => round($discount, $decimals),
+            'net' => round($net, $decimals),
             'tax' => $tax,
-            'total' => round($net + $tax, 2),
+            'total' => round($net + $tax, $decimals),
         ];
 
         return $data;

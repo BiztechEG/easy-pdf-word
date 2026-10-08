@@ -1,5 +1,7 @@
 <?php
 
+use BiztechEG\EasyPdfWord\Support\Currency;
+
 /*
 | Receipt or payment voucher (سند قبض / سند صرف): the amount in figures and
 | words, who paid or was paid, what for, how (cash, cheque, transfer, card)
@@ -41,7 +43,7 @@ return [
     ],
 
     'prepare' => function (array $data): array {
-        $data['amount'] = round((float) $data['amount'], 2);
+        $data['amount'] = Currency::round($data['amount'], $data['currency']);
         $data['signatures'] ??= $data['type'] === 'payment'
             ? ['receiver', 'accountant', 'manager']
             : ['payer', 'cashier', 'accountant'];

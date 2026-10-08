@@ -3,6 +3,7 @@
     $primary = $doc->theme('primary', '#0F766E');
     $border = $doc->theme('border', '#E5E7EB');
     $currency = $invoice['currency'];
+    $decimals = $doc->decimals($currency);
     $currencyLabel = $doc->t('currencies.'.$currency) === 'currencies.'.$currency ? $currency : $doc->t('currencies.'.$currency);
     $logo = $doc->image($doc->theme('logo'));
 @endphp
@@ -88,9 +89,9 @@
                     <td>{{ $loop->iteration }}</td>
                     <td>{{ $item['description'] }}</td>
                     <td class="num">{{ $doc->number($item['quantity'], floor($item['quantity']) == $item['quantity'] ? 0 : 2) }}</td>
-                    <td class="num">{{ $doc->number($item['unit_price']) }}</td>
-                    <td class="num">{{ ! empty($item['discount']) ? $doc->number($item['discount']) : '-' }}</td>
-                    <td class="num">{{ $doc->number($item['total']) }}</td>
+                    <td class="num">{{ $doc->number($item['unit_price'], $decimals) }}</td>
+                    <td class="num">{{ ! empty($item['discount']) ? $doc->number($item['discount'], $decimals) : '-' }}</td>
+                    <td class="num">{{ $doc->number($item['total'], $decimals) }}</td>
                 </tr>
             @endforeach
         </tbody>
@@ -108,12 +109,12 @@
             </td>
             <td style="width: 48%;">
                 <table class="totals">
-                    <tr><td>{{ $doc->t('subtotal') }}</td><td class="num">{{ $doc->number($totals['subtotal']) }}</td></tr>
+                    <tr><td>{{ $doc->t('subtotal') }}</td><td class="num">{{ $doc->number($totals['subtotal'], $decimals) }}</td></tr>
                     @if ($totals['discount'] > 0)
-                        <tr><td>{{ $doc->t('discount') }}</td><td class="num">- {{ $doc->number($totals['discount']) }}</td></tr>
+                        <tr><td>{{ $doc->t('discount') }}</td><td class="num">- {{ $doc->number($totals['discount'], $decimals) }}</td></tr>
                     @endif
-                    <tr><td>{{ $doc->t('vat', ['rate' => $doc->number($invoice['tax_rate'], 0)]) }}</td><td class="num">{{ $doc->number($totals['tax']) }}</td></tr>
-                    <tr class="grand"><td>{{ $doc->t('total') }}</td><td class="num">{{ $doc->number($totals['total']) }} {{ $currencyLabel }}</td></tr>
+                    <tr><td>{{ $doc->t('vat', ['rate' => $doc->number($invoice['tax_rate'], 0)]) }}</td><td class="num">{{ $doc->number($totals['tax'], $decimals) }}</td></tr>
+                    <tr class="grand"><td>{{ $doc->t('total') }}</td><td class="num">{{ $doc->number($totals['total'], $decimals) }} {{ $currencyLabel }}</td></tr>
                 </table>
             </td>
         </tr>

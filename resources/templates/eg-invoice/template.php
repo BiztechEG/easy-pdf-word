@@ -1,5 +1,7 @@
 <?php
 
+use BiztechEG\EasyPdfWord\Support\Currency;
+
 /*
 | Egyptian e-invoice (منظومة الفاتورة الإلكترونية - ETA): the printed copy
 | of a document submitted to the Egyptian Tax Authority.
@@ -86,6 +88,7 @@ return [
 
         $taxTotals = [];
         $sales = $discounts = $net = $total = 0.0;
+        $decimals = Currency::decimals($data['document']['currency'] ?? null);
 
         foreach ($data['lines'] as $i => $line) {
             $lineSales = round((float) $line['quantity'] * (float) $line['unit_price'], 5);
@@ -117,11 +120,11 @@ return [
             }
 
             $data['lines'][$i] = array_replace($line, [
-                'sales' => round($lineSales, 2),
-                'net' => round($lineNet, 2),
-                'total' => round($lineTotal, 2),
+                'sales' => round($lineSales, $decimals),
+                'net' => round($lineNet, $decimals),
+                'total' => round($lineTotal, $decimals),
                 'taxes' => $taxes,
-                'vat' => round($vat, 2),
+                'vat' => round($vat, $decimals),
             ]);
 
             $sales += $lineSales;
@@ -134,12 +137,12 @@ return [
         $extra = (float) ($data['extra_discount'] ?? 0);
 
         $data['totals'] = [
-            'sales' => round($sales, 2),
-            'discount' => round($discounts, 2),
-            'net' => round($net, 2),
-            'taxes' => array_map(fn ($amount) => round($amount, 2), $taxTotals),
-            'extra_discount' => round($extra, 2),
-            'total' => round($total - $extra, 2),
+            'sales' => round($sales, $decimals),
+            'discount' => round($discounts, $decimals),
+            'net' => round($net, $decimals),
+            'taxes' => array_map(fn ($amount) => round($amount, $decimals), $taxTotals),
+            'extra_discount' => round($extra, $decimals),
+            'total' => round($total - $extra, $decimals),
         ];
 
         $uuid = $data['document']['uuid'] ?? null;

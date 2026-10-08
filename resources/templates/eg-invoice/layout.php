@@ -17,6 +17,7 @@ return function (DocumentBuilder $invoice, array $data, DocContext $doc): void {
     $receiver = $data['receiver'];
     $totals = $data['totals'];
     $currency = $doc->currency($document['currency']);
+    $decimals = $doc->decimals($document['currency']);
     $logo = $doc->theme('logo');
     $label = fn (string $key) => ['text' => $doc->t($key).': ', 'color' => $muted];
     $code = fn (?string $value) => ['text' => (string) $value, 'ltr' => true];
@@ -99,10 +100,10 @@ return function (DocumentBuilder $invoice, array $data, DocContext $doc): void {
             $line['description'],
             $line['unit'] ?? '',
             $doc->numberText($quantity, floor($quantity) == $quantity ? 0 : 2),
-            $doc->numberText($line['unit_price']),
-            ! empty($line['discount']) ? $doc->numberText($line['discount']) : '-',
-            $doc->numberText($line['vat']),
-            $doc->numberText($line['total']),
+            $doc->numberText($line['unit_price'], $decimals),
+            ! empty($line['discount']) ? $doc->numberText($line['discount'], $decimals) : '-',
+            $doc->numberText($line['vat'], $decimals),
+            $doc->numberText($line['total'], $decimals),
         ];
     }
 
@@ -119,26 +120,26 @@ return function (DocumentBuilder $invoice, array $data, DocContext $doc): void {
 
     foreach ($totals['taxes'] as $type => $amount) {
         $name = $doc->t('tax_types.'.$type);
-        $summary[] = ['', $type.' - '.($name === 'tax_types.'.$type ? $type : $name), ($type === 'T4' ? '-' : '').$doc->numberText($amount)];
+        $summary[] = ['', $type.' - '.($name === 'tax_types.'.$type ? $type : $name), ($type === 'T4' ? '-' : '').$doc->numberText($amount, $decimals)];
     }
 
     $sum = [
-        ['', $doc->t('sales'), $doc->numberText($totals['sales'])],
+        ['', $doc->t('sales'), $doc->numberText($totals['sales'], $decimals)],
     ];
 
     if ($totals['discount'] > 0) {
-        $sum[] = ['', $doc->t('total_discount'), '-'.$doc->numberText($totals['discount'])];
+        $sum[] = ['', $doc->t('total_discount'), '-'.$doc->numberText($totals['discount'], $decimals)];
     }
 
-    $sum[] = ['', $doc->t('net_total'), $doc->numberText($totals['net'])];
+    $sum[] = ['', $doc->t('net_total'), $doc->numberText($totals['net'], $decimals)];
     $sum = array_merge($sum, $summary);
 
     if ($totals['extra_discount'] > 0) {
-        $sum[] = ['', $doc->t('extra_discount'), '-'.$doc->numberText($totals['extra_discount'])];
+        $sum[] = ['', $doc->t('extra_discount'), '-'.$doc->numberText($totals['extra_discount'], $decimals)];
     }
 
     $grand = ['bold' => true, 'size' => 11.5, 'color' => '#FFFFFF', 'background' => $primary];
-    $sum[] = ['', ['text' => $doc->t('total')] + $grand, ['text' => $doc->numberText($totals['total']).' '.$currency] + $grand];
+    $sum[] = ['', ['text' => $doc->t('total')] + $grand, ['text' => $doc->numberText($totals['total'], $decimals).' '.$currency] + $grand];
 
     $invoice->table($sum, ['columns' => [45, 35, ['width' => 20, 'align' => 'end']], 'borders' => false, 'font_size' => 9.5]);
 

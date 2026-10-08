@@ -17,6 +17,7 @@ return function (DocumentBuilder $quote, array $data, DocContext $doc): void {
     $customer = $data['customer'];
     $totals = $data['totals'];
     $currency = $doc->currency($info['currency']);
+    $decimals = $doc->decimals($info['currency']);
     $date = fn ($value) => Carbon::parse($value)->format('Y/m/d');
     $logo = $doc->theme('logo');
 
@@ -85,9 +86,9 @@ return function (DocumentBuilder $quote, array $data, DocContext $doc): void {
             $description,
             $item['unit'] ?? '',
             $doc->numberText($quantity, floor($quantity) == $quantity ? 0 : 2),
-            $doc->numberText($item['unit_price']),
-            ! empty($item['discount']) ? $doc->numberText($item['discount']) : '-',
-            $doc->numberText($item['total']),
+            $doc->numberText($item['unit_price'], $decimals),
+            ! empty($item['discount']) ? $doc->numberText($item['discount'], $decimals) : '-',
+            $doc->numberText($item['total'], $decimals),
         ];
     }
 
@@ -99,19 +100,19 @@ return function (DocumentBuilder $quote, array $data, DocContext $doc): void {
     ]);
 
     // Totals.
-    $sum = [['', $doc->t('subtotal'), $doc->numberText($totals['subtotal'])]];
+    $sum = [['', $doc->t('subtotal'), $doc->numberText($totals['subtotal'], $decimals)]];
 
     if ($totals['discount'] > 0) {
-        $sum[] = ['', $doc->t('discount'), '-'.$doc->numberText($totals['discount'])];
-        $sum[] = ['', $doc->t('net'), $doc->numberText($totals['net'])];
+        $sum[] = ['', $doc->t('discount'), '-'.$doc->numberText($totals['discount'], $decimals)];
+        $sum[] = ['', $doc->t('net'), $doc->numberText($totals['net'], $decimals)];
     }
 
     if ($totals['tax'] > 0) {
-        $sum[] = ['', $doc->t('vat', ['rate' => $doc->numberText($info['tax_rate'], 0)]), $doc->numberText($totals['tax'])];
+        $sum[] = ['', $doc->t('vat', ['rate' => $doc->numberText($info['tax_rate'], 0)]), $doc->numberText($totals['tax'], $decimals)];
     }
 
     $grand = ['bold' => true, 'size' => 11.5, 'color' => '#FFFFFF', 'background' => $primary];
-    $sum[] = ['', ['text' => $doc->t('total')] + $grand, ['text' => $doc->numberText($totals['total']).' '.$currency] + $grand];
+    $sum[] = ['', ['text' => $doc->t('total')] + $grand, ['text' => $doc->numberText($totals['total'], $decimals).' '.$currency] + $grand];
 
     $quote->table($sum, ['columns' => [52, 28, ['width' => 20, 'align' => 'end']], 'borders' => false, 'font_size' => 10]);
 
