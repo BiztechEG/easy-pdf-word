@@ -67,8 +67,9 @@ class Numerals
     {
         $style = self::normalizeStyle($style);
 
+        // A tag ends at the first ">" outside quotes: <p title="a > 5">.
         $parts = preg_split(
-            '/(<style\b[^>]*>.*?<\/style>|<script\b[^>]*>.*?<\/script>|<!--.*?-->|<[^>]+>)/is',
+            '/(<style\b[^>]*>.*?<\/style>|<script\b[^>]*>.*?<\/script>|<!--.*?-->|<[a-z\/!?](?:[^>"\']|"[^"]*"|\'[^\']*\')*>)/is',
             $html,
             -1,
             PREG_SPLIT_DELIM_CAPTURE
@@ -79,12 +80,19 @@ class Numerals
                 continue;
             }
 
-            // Leave HTML entities such as &#123; alone.
-            $parts[$i] = preg_replace_callback(
-                '/&#?\w+;|[^&]+|&/u',
-                fn ($m) => $m[0][0] === '&' && strlen($m[0]) > 1 ? $m[0] : self::convert($m[0], $style, $separators),
-                $part
-            );
+            // HTML entities such as &#123; are left alone. They wait as a
+            // placeholder while the text is converted, so a link with
+            // "&amp;" in it is still seen as one link and keeps its digits.
+            $entities = [];
+            $text = preg_replace_callback('/&#?\w+;/u', function ($m) use (&$entities) {
+                $entities[] = $m[0];
+
+                return "\u{E000}";
+            }, $part);
+
+            $parts[$i] = preg_replace_callback('/\x{E000}/u', function () use (&$entities) {
+                return (string) array_shift($entities);
+            }, self::convert($text, $style, $separators));
         }
 
         return implode('', $parts);

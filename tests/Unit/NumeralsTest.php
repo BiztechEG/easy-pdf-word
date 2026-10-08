@@ -37,5 +37,15 @@ class NumeralsTest extends TestCase
         $this->assertSame('راسلنا على info@biz2tech.com أو ٠١٠٠', Numerals::toArabic('راسلنا على info@biz2tech.com أو 0100'));
         $this->assertSame('الموقع https://site2.com/p/3 و www.x1.com رقم ٥', Numerals::toArabic('الموقع https://site2.com/p/3 و www.x1.com رقم 5'));
         $this->assertSame('<p>info@a1.com ١٢</p>', Numerals::convertHtml('<p>info@a1.com 12</p>', 'arabic'));
+        $this->assertSame(
+            '<p>https://pay.example.com/i?id=1024&amp;amount=150 رقم ٧</p>',
+            Numerals::convertHtml('<p>https://pay.example.com/i?id=1024&amp;amount=150 رقم 7</p>', 'arabic')
+        );
+    }
+
+    public function test_quoted_attribute_values_may_hold_a_closing_bracket(): void
+    {
+        $this->assertSame('<p title="a > 5">x ٥</p>', Numerals::convertHtml('<p title="a > 5">x 5</p>', 'arabic'));
+        $this->assertSame('<p>١ &lt; ٢</p>', Numerals::convertHtml('<p>1 &lt; 2</p>', 'arabic'));
     }
 }
