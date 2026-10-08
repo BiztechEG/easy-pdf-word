@@ -124,6 +124,10 @@ class MpdfDriver implements PdfDriver
             // (Chinese, Hindi, ...); Arabic text then keeps the document font.
             'autoLangToFont' => (bool) ($this->config['auto_lang_to_font'] ?? false),
             'languageToFont' => new ArabicLanguageToFont($arabicFont),
+            // Allowed remote images: no redirects past the allowed hosts, and
+            // a slow server cannot hold the request.
+            'curlFollowLocation' => false,
+            'curlExecutionTimeout' => 10,
         ];
     }
 
