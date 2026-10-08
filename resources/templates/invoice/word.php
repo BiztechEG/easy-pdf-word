@@ -69,11 +69,11 @@ return function (DocumentBuilder $word, array $data, DocContext $doc): void {
         }
 
         if (! empty($party['tax_number'])) {
-            $lines[] = $doc->t('tax_number').': '.$party['tax_number'];
+            $lines[] = [$doc->t('tax_number').': ', ['text' => (string) $party['tax_number'], 'ltr' => true]];
         }
 
         if (! empty($party['commercial_register'])) {
-            $lines[] = $doc->t('commercial_register').': '.$party['commercial_register'];
+            $lines[] = [$doc->t('commercial_register').': ', ['text' => (string) $party['commercial_register'], 'ltr' => true]];
         }
 
         return ['lines' => $lines, 'border' => $border];

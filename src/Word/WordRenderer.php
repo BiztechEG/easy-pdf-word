@@ -364,8 +364,9 @@ class WordRenderer
 
     /**
      * Digits per the numerals setting. In right-to-left documents an "ltr"
-     * run and a negative number are wrapped in a left-to-right embedding,
-     * so Word shows "-2.3", not "2.3-".
+     * run and a negative number are wrapped in a left-to-right override, so
+     * Word shows "-2.3", not "2.3-", and keeps INV-٢٠٢٦-١٠٢٤ in order (an
+     * embedding is not enough for Arabic-Indic digits).
      */
     private function text(string $text, bool $ltr = false): string
     {
@@ -376,10 +377,10 @@ class WordRenderer
         }
 
         if ($ltr) {
-            return "\u{202A}".$text."\u{202C}";
+            return "\u{202D}".$text."\u{202C}";
         }
 
-        return preg_replace('/(?<![\p{L}\p{N}])- ?[\d٠-٩][\d٠-٩.,٫٬]*/u', "\u{202A}\$0\u{202C}", $text) ?? $text;
+        return preg_replace('/(?<![\p{L}\p{N}])- ?[\d٠-٩][\d٠-٩.,٫٬]*/u', "\u{202D}\$0\u{202C}", $text) ?? $text;
     }
 
     /** ar-EG for an "ar_EG" document, ar-SA for plain "ar". */
