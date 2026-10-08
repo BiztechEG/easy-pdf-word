@@ -1,0 +1,27 @@
+<?php
+
+return [
+    'title' => 'Tax Invoice',
+    'number' => 'Invoice no.',
+    'date' => 'Issue date',
+    'hijri_date' => 'Hijri date',
+    'due_date' => 'Due date',
+    'seller' => 'Seller',
+    'buyer' => 'Bill to',
+    'tax_number' => 'Tax no.',
+    'commercial_register' => 'Commercial reg.',
+    'description' => 'Description',
+    'quantity' => 'Qty',
+    'unit_price' => 'Unit price',
+    'discount' => 'Discount',
+    'line_total' => 'Total',
+    'subtotal' => 'Subtotal',
+    'vat' => 'VAT (:rate%)',
+    'total' => 'Total due',
+    'amount_in_words' => 'Amount in words',
+    'notes' => 'Notes',
+    'eta_uuid' => 'E-invoice UUID',
+    'page' => 'Page',
+    'of' => 'of',
+    'currencies' => [],
+];
