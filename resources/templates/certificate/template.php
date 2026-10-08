@@ -8,6 +8,7 @@
 | type:   "completion", "attendance", "participation" or "appreciation".
 | gender: "male" or "female", for the Arabic wording (لإتمامه / لإتمامها).
 | issuer: who gives it; the company name in the theme by default.
+| from, to: the dates of the course; one of them alone is a single day.
 | verify_url: a link to check the certificate, shown as a QR code.
 */
 

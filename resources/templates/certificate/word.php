@@ -36,7 +36,7 @@ return function (DocumentBuilder $word, array $data, DocContext $doc): void {
     $facts = array_values(array_filter([
         ! empty($data['from']) && ! empty($data['to'])
             ? $doc->t('period', ['from' => $format($data['from']), 'to' => $format($data['to'])])
-            : (! empty($data['from']) ? $doc->t('on', ['date' => $format($data['from'])]) : null),
+            : (($day = ($data['from'] ?? null) ?: ($data['to'] ?? null)) ? $doc->t('on', ['date' => $format($day)]) : null),
         ! empty($data['hours_form']) ? $doc->t('hours.'.$data['hours_form'], ['hours' => $doc->rate($data['hours'])]) : null,
         ! empty($data['grade']) ? $doc->t('grade', ['grade' => $data['grade']]) : null,
     ]));

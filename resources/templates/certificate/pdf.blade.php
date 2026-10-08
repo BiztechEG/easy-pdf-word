@@ -6,7 +6,7 @@
 
     // "خلال الفترة من ... إلى ...، بعدد 40 ساعة تدريبية، بتقدير امتياز"
     $facts = array_values(array_filter([
-        ! empty($from) && ! empty($to) ? $doc->t('period', ['from' => $format($from), 'to' => $format($to)]) : (! empty($from) ? $doc->t('on', ['date' => $format($from)]) : null),
+        ! empty($from) && ! empty($to) ? $doc->t('period', ['from' => $format($from), 'to' => $format($to)]) : (($day = ($from ?? null) ?: ($to ?? null)) ? $doc->t('on', ['date' => $format($day)]) : null),
         ! empty($hours_form) ? $doc->t('hours.'.$hours_form, ['hours' => $doc->rate($hours)]) : null,
         ! empty($grade) ? $doc->t('grade', ['grade' => $grade]) : null,
     ]));
