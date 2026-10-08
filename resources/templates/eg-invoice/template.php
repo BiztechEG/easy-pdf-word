@@ -10,9 +10,11 @@
 | type (T1 VAT, T2/T3 table tax, T4 withholding, ...).
 |
 | Line taxes: [['type' => 'T1', 'rate' => 14], ['type' => 'T4', 'subtype' => 'W010', 'rate' => 1]]
-| or a fixed amount: ['type' => 'T3', 'amount' => 50].
-| VAT (T1) is charged on the net amount plus the other taxes, as ETA
-| computes it; withholding (T4) is deducted.
+| or a fixed amount: ['type' => 'T3', 'amount' => 50]. Computed as ETA
+| does: fees (T5-T20) on the net amount; table tax T2 on the net plus T3
+| and the taxable fees (T5-T12); VAT (T1) on the net plus T2, T3 and the
+| taxable fees; withholding (T4) on the net, deducted. Non-taxable fees
+| (T13-T20) are added to the total only.
 |
 | The QR links to the document on the ETA portal when uuid and long_id are
 | given; "qr" overrides it.
@@ -67,6 +69,21 @@ return [
     ],
 
     'prepare' => function (array $data, array $theme = []): array {
+        // Adds the line's taxes of the given types, charged on $base, to $taxes; returns their sum.
+        $charge = function (array $byType, array $types, float $base, array &$taxes): float {
+            $charged = 0.0;
+
+            foreach ($types as $type) {
+                foreach ($byType[$type] ?? [] as $tax) {
+                    $amount = round(isset($tax['amount']) ? (float) $tax['amount'] : $base * (float) ($tax['rate'] ?? 0) / 100, 5);
+                    $taxes[] = ['type' => $type, 'subtype' => $tax['subtype'] ?? ($type === 'T1' ? 'V009' : null), 'rate' => $tax['rate'] ?? null, 'amount' => $amount];
+                    $charged += $amount;
+                }
+            }
+
+            return $charged;
+        };
+
         $taxTotals = [];
         $sales = $discounts = $net = $total = 0.0;
 
@@ -74,33 +91,24 @@ return [
             $lineSales = round((float) $line['quantity'] * (float) $line['unit_price'], 5);
             $lineDiscount = (float) ($line['discount'] ?? 0);
             $lineNet = $lineSales - $lineDiscount;
+            $byType = [];
+
+            foreach ($line['taxes'] ?? [] as $tax) {
+                $byType[strtoupper($tax['type'])][] = $tax;
+            }
+
+            // ETA order: fees and fixed table tax on the net, table tax (T2)
+            // on the net + T3 + taxable fees, VAT (T1) on all of those, and
+            // withholding (T4) on the net.
             $taxes = [];
+            $fees = $charge($byType, array_map(fn ($n) => 'T'.$n, range(5, 12)), $lineNet, $taxes);
+            $charge($byType, array_map(fn ($n) => 'T'.$n, range(13, 20)), $lineNet, $taxes);
+            $t3 = $charge($byType, ['T3'], $lineNet, $taxes);
+            $t2 = $charge($byType, ['T2'], $lineNet + $t3 + $fees, $taxes);
+            $vat = $charge($byType, ['T1'], $lineNet + $t2 + $t3 + $fees, $taxes);
+            $charge($byType, ['T4'], $lineNet, $taxes);
 
-            // Non-VAT taxes first: VAT is charged on the net plus these.
-            $others = 0.0;
-
-            foreach ($line['taxes'] ?? [] as $tax) {
-                $type = strtoupper($tax['type']);
-
-                if ($type === 'T1') {
-                    continue;
-                }
-
-                $amount = round(isset($tax['amount']) ? (float) $tax['amount'] : $lineNet * (float) ($tax['rate'] ?? 0) / 100, 5);
-                $taxes[] = ['type' => $type, 'subtype' => $tax['subtype'] ?? null, 'rate' => $tax['rate'] ?? null, 'amount' => $amount];
-
-                if ($type !== 'T4') {
-                    $others += $amount;
-                }
-            }
-
-            foreach ($line['taxes'] ?? [] as $tax) {
-                if (strtoupper($tax['type']) === 'T1') {
-                    $amount = round(isset($tax['amount']) ? (float) $tax['amount'] : ($lineNet + $others) * (float) ($tax['rate'] ?? 0) / 100, 5);
-                    array_unshift($taxes, ['type' => 'T1', 'subtype' => $tax['subtype'] ?? 'V009', 'rate' => $tax['rate'] ?? null, 'amount' => $amount]);
-                }
-            }
-
+            usort($taxes, fn ($a, $b) => strnatcmp($a['type'], $b['type']));
             $lineTotal = $lineNet;
 
             foreach ($taxes as $tax) {
@@ -108,9 +116,13 @@ return [
                 $taxTotals[$tax['type']] = ($taxTotals[$tax['type']] ?? 0) + $tax['amount'];
             }
 
-            $data['lines'][$i] += ['sales' => round($lineSales, 2), 'net' => round($lineNet, 2), 'total' => round($lineTotal, 2)];
-            $data['lines'][$i]['taxes'] = $taxes;
-            $data['lines'][$i]['vat'] = round(array_sum(array_map(fn ($t) => $t['type'] === 'T1' ? $t['amount'] : 0, $taxes)), 2);
+            $data['lines'][$i] = array_replace($line, [
+                'sales' => round($lineSales, 2),
+                'net' => round($lineNet, 2),
+                'total' => round($lineTotal, 2),
+                'taxes' => $taxes,
+                'vat' => round($vat, 2),
+            ]);
 
             $sales += $lineSales;
             $discounts += $lineDiscount;
