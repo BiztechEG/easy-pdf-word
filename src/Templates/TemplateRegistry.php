@@ -23,6 +23,12 @@ class TemplateRegistry
         return dirname(__DIR__, 2).'/resources/templates';
     }
 
+    /** Letters, digits, dots, dashes and underscores, and not "." or "..". */
+    public static function isValidName(string $name): bool
+    {
+        return preg_match('/^(?!\.+$)[A-Za-z0-9._-]+$/', $name) === 1;
+    }
+
     public function addPath(string $path, bool $first = true): static
     {
         $this->paths = array_values(array_unique($first ? [$path, ...$this->paths] : [...$this->paths, $path]));
@@ -70,7 +76,7 @@ class TemplateRegistry
 
     private function locate(string $name): ?string
     {
-        if (! preg_match('/^[A-Za-z0-9._-]+$/', $name)) {
+        if (! self::isValidName($name)) {
             return null;
         }
 
