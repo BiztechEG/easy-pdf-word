@@ -8,6 +8,7 @@ use BiztechEG\EasyPdfWord\Fonts\FontRegistry;
 use BiztechEG\EasyPdfWord\Pdf\Drivers\BrowsershotDriver;
 use BiztechEG\EasyPdfWord\Pdf\Drivers\GotenbergDriver;
 use BiztechEG\EasyPdfWord\Pdf\Drivers\MpdfDriver;
+use Closure;
 use Illuminate\Http\Client\Factory as Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Manager;
@@ -28,6 +29,12 @@ class PdfManager extends Manager
     public function getDefaultDriver(): string
     {
         return $this->config->get('easy-pdf-word.pdf.driver', 'mpdf');
+    }
+
+    /** Engine names are matched without case, as driver() lowercases them. */
+    public function extend($driver, Closure $callback)
+    {
+        return parent::extend(strtolower($driver), $callback);
     }
 
     public function normalize(?string $driver): string
