@@ -1,0 +1,28 @@
+<?php
+
+return [
+    'title' => 'Price Quotation',
+    'number' => 'Quotation no.',
+    'date' => 'Date',
+    'valid_until' => 'Valid until',
+    'to' => 'To',
+    'contact' => 'Attn.',
+    'phone' => 'Phone',
+    'subject' => 'Subject',
+    'intro' => 'We are pleased to offer you the following quotation:',
+    'description' => 'Description',
+    'unit' => 'Unit',
+    'quantity' => 'Qty',
+    'unit_price' => 'Unit price',
+    'discount' => 'Discount',
+    'line_total' => 'Total',
+    'subtotal' => 'Subtotal',
+    'net' => 'Net after discount',
+    'vat' => 'VAT (:rate%)',
+    'total' => 'Grand total',
+    'terms' => 'Terms and conditions',
+    'notes' => 'Notes',
+    'closing' => 'Kind regards,',
+    'page' => 'Page',
+    'of' => 'of',
+];
