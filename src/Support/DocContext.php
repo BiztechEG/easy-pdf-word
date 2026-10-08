@@ -149,7 +149,9 @@ class DocContext
         }
 
         [$integer, $fraction, $per] = $this->split($amount, $currency);
-        $text = Tafqeet::words($integer).' '.strtoupper($currency).($fraction > 0 ? ' و'.$fraction.'/'.$per : '');
+        // -0.50 has no minus in its whole part, but is still negative.
+        $minus = $integer === 0 && self::toFloat($amount) < 0 && $fraction > 0 ? 'سالب ' : '';
+        $text = $minus.Tafqeet::words($integer).' '.strtoupper($currency).($fraction > 0 ? ' و'.$fraction.'/'.$per : '');
 
         return $only ? 'فقط '.$text.' لا غير' : $text;
     }
@@ -172,7 +174,13 @@ class DocContext
         }
 
         [$integer, $fraction, $per] = $this->split($amount, $currency);
-        $words = (new \NumberFormatter($language, \NumberFormatter::SPELLOUT))->format($integer);
+        $formatter = new \NumberFormatter($language, \NumberFormatter::SPELLOUT);
+        $words = $formatter->format($integer);
+
+        // -0.50: the language's word for minus ("minus", "moins"), as the whole part has none.
+        if ($integer === 0 && self::toFloat($amount) < 0 && $fraction > 0) {
+            $words = trim(str_replace($formatter->format(1), '', $formatter->format(-1))).' '.$words;
+        }
 
         return trim($words.' '.strtoupper($currency).($fraction > 0 ? ' and '.$fraction.'/'.$per : '').($only ? ' only' : ''));
     }
