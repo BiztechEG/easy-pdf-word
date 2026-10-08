@@ -32,6 +32,9 @@ use Stringable;
  */
 class DocxTemplateFiller
 {
+    /** @var string[] temporary files, removed after each fill */
+    private array $temporary = [];
+
     public function fill(string $path, array $data, DocContext $doc): string
     {
         if (! class_exists(TemplateProcessor::class)) {
@@ -62,10 +65,9 @@ class DocxTemplateFiller
                 $processor->setValue($variable, $this->text($value, $doc));
             }
 
-            $file = tempnam(sys_get_temp_dir(), 'easy-docx');
+            $file = $this->temporary[] = tempnam(sys_get_temp_dir(), 'easy-docx');
             $processor->saveAs($file);
             $content = (string) file_get_contents($file);
-            @unlink($file);
 
             return $content;
         } finally {
@@ -73,9 +75,6 @@ class DocxTemplateFiller
             $this->cleanup();
         }
     }
-
-    /** @var string[] temporary image files */
-    private array $temporary = [];
 
     /**
      * Repeat a table row for each item of a list, e.g. ${items.description}.
