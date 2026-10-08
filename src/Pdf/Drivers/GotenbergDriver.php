@@ -39,7 +39,7 @@ class GotenbergDriver implements PdfDriver
 
         $request = $this->http
             ->timeout((int) ($this->config['timeout'] ?? 60))
-            ->attach('files', Watermark::inject($html, $options), 'index.html');
+            ->attach('files', $this->withoutScripts(Watermark::inject($html, $options)), 'index.html');
 
         foreach (['header' => $options->header, 'footer' => $options->footer] as $name => $part) {
             if ($part) {
@@ -62,6 +62,24 @@ class GotenbergDriver implements PdfDriver
         }
 
         return $response->body();
+    }
+
+    /**
+     * Gotenberg has no per request switch for JavaScript, so a policy in the
+     * page turns it off, as Browsershot does: HTML that slipped into the data
+     * cannot make the browser request other pages or files.
+     */
+    private function withoutScripts(string $html): string
+    {
+        if (! empty($this->config['javascript'])) {
+            return $html;
+        }
+
+        $policy = '<meta http-equiv="Content-Security-Policy" content="script-src \'none\'">';
+        $count = 0;
+        $html = preg_replace('/<head\b[^>]*>/i', '$0'.$policy, $html, 1, $count) ?? $html;
+
+        return $count === 1 ? $html : $policy.$html;
     }
 
     private function inches(float $mm): string
