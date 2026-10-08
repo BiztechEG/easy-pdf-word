@@ -100,17 +100,34 @@ class MpdfDriver implements PdfDriver
         $mpdf->SetProtection($protection['allow'], $protection['user'], $protection['owner'], 128);
     }
 
+    /**
+     * mPDF's font cache and work files. By default a folder per system user
+     * that only they can open: the web server and a queue worker often run
+     * as different users, and on shared hosting other sites share /tmp.
+     */
+    public static function tempDir(?string $configured = null): string
+    {
+        $user = function_exists('posix_geteuid') ? (string) posix_geteuid() : substr(md5((string) (getenv('USERNAME') ?: get_current_user())), 0, 8);
+        $dir = $configured ?: sys_get_temp_dir().'/easy-pdf-word-'.$user;
+
+        if (! is_dir($dir) && ! @mkdir($dir, $configured ? 0775 : 0700, true) && ! is_dir($dir)) {
+            throw new \RuntimeException("Cannot create the mPDF temp folder [{$dir}]. Set a writable folder in easy-pdf-word.pdf.drivers.mpdf.temp_dir.");
+        }
+
+        if (! is_writable($dir)) {
+            throw new \RuntimeException("The mPDF temp folder [{$dir}] is not writable. Set a writable folder in easy-pdf-word.pdf.drivers.mpdf.temp_dir.");
+        }
+
+        return $dir;
+    }
+
     private function mpdfConfig(PdfOptions $options): array
     {
         [$fontDirs, $fontdata] = $this->fonts->forMpdf((int) ($this->config['use_kashida'] ?? 75));
         [$top, $right, $bottom, $left] = $options->margins;
         $arabicFont = $this->fonts->supportsArabic($options->font) ? strtolower($options->font) : 'cairo';
 
-        $tempDir = $this->config['temp_dir'] ?? null ?: sys_get_temp_dir().'/easy-pdf-word';
-
-        if (! is_dir($tempDir)) {
-            @mkdir($tempDir, 0775, true);
-        }
+        $tempDir = self::tempDir($this->config['temp_dir'] ?? null);
 
         return [
             'mode' => 'utf-8',
