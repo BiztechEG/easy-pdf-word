@@ -11,6 +11,7 @@ use Mpdf\Config\ConfigVariables;
 use Mpdf\Config\FontVariables;
 use Mpdf\Mpdf;
 use Mpdf\Output\Destination;
+use Mpdf\WatermarkText;
 
 /**
  * Pure PHP engine. Shapes Arabic and applies bidi itself, so it needs no
@@ -60,9 +61,31 @@ class MpdfDriver implements PdfDriver
             $mpdf->SetHTMLFooter($this->pageNumbers($options->footer));
         }
 
+        if ($options->watermark) {
+            // mPDF shapes the text and fits it to the page diagonal.
+            $mpdf->SetWatermarkText(new WatermarkText(
+                $options->watermark['text'],
+                color: $options->watermark['color'],
+                alpha: $options->watermark['opacity'],
+                font: strtolower($options->font),
+            ));
+            $mpdf->showWatermarkText = true;
+        }
+
+        if ($options->protection) {
+            self::protect($mpdf, $options->protection);
+        }
+
         $mpdf->WriteHTML($html);
 
         return $mpdf->Output('', Destination::STRING_RETURN);
+    }
+
+    /** @param  array{user: string, owner: ?string, allow: list<string>}  $protection */
+    public static function protect(Mpdf $mpdf, array $protection): void
+    {
+        // 128-bit RC4, the strongest mPDF offers; a null owner password becomes a random one.
+        $mpdf->SetProtection($protection['allow'], $protection['user'], $protection['owner'], 128);
     }
 
     private function mpdfConfig(PdfOptions $options): array

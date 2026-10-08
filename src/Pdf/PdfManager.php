@@ -68,10 +68,12 @@ class PdfManager extends Manager
         $content = $htmlFor ? $htmlFor($engine) : $html;
 
         try {
-            return [$engine->render($content, $options), $name];
+            $pdf = $engine->render($content, $options);
         } catch (Throwable $e) {
             return $this->fallback($name, $fallback, $e, $html, $options, $htmlFor);
         }
+
+        return [$this->protect($pdf, $engine, $options), $name];
     }
 
     /** @return array{0: string, 1: string} */
@@ -85,7 +87,17 @@ class PdfManager extends Manager
 
         $engine = $this->driver($fallback);
 
-        return [$engine->render($htmlFor ? $htmlFor($engine) : $html, $options), $fallback];
+        return [$this->protect($engine->render($htmlFor ? $htmlFor($engine) : $html, $options), $engine, $options), $fallback];
+    }
+
+    /** mPDF encrypts as it renders; other engines' files get a password afterwards. */
+    private function protect(string $pdf, PdfDriver $engine, PdfOptions $options): string
+    {
+        if ($options->protection === null || $engine instanceof MpdfDriver) {
+            return $pdf;
+        }
+
+        return (new PdfProtector($this->engineConfig('mpdf')['temp_dir'] ?? null))->protect($pdf, $options);
     }
 
     public function engineConfig(string $name): array
