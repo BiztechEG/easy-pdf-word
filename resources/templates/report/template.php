@@ -1,5 +1,7 @@
 <?php
 
+use BiztechEG\EasyPdfWord\Support\DocContext;
+
 /*
 | Table report: any list of rows (arrays, Eloquent models, collections) with
 | chosen columns, optional totals row and summary boxes. The table header
@@ -57,7 +59,8 @@ return [
         $totals = [];
 
         foreach ((array) $data['sum'] as $key) {
-            $totals[$key] = array_sum(array_map(fn ($row) => (float) data_get($row, $key, 0), $rows));
+            // Read like the cells are: "1,240" is 1240, not 1.
+            $totals[$key] = array_sum(array_map(fn ($row) => is_scalar($value = data_get($row, $key)) ? DocContext::toFloat($value) : 0.0, $rows));
         }
 
         $data['columns'] = $columns;
