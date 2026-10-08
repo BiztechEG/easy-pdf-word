@@ -120,9 +120,10 @@
         </tr>
     </table>
 
-    @if ($doc->isRtl())
+    @php($words = $doc->inWords($totals['total'], $currency))
+    @if ($words !== '')
         <div class="words" style="margin-top: 5mm;">
-            <strong>{{ $doc->t('amount_in_words') }}:</strong> {{ $doc->tafqeet($totals['total'], $currency) }}
+            <strong>{{ $doc->t('amount_in_words') }}:</strong> {{ $words }}
         </div>
     @endif
 
