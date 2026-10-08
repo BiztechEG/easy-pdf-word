@@ -11,6 +11,7 @@ use BiztechEG\EasyPdfWord\Pdf\Drivers\MpdfDriver;
 use Illuminate\Http\Client\Factory as Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Manager;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -57,7 +58,12 @@ class PdfManager extends Manager
             $engine = $this->driver($name);
 
             if (! $engine->isAvailable()) {
-                throw new DriverNotAvailable("The [{$name}] PDF engine is not available.");
+                throw match ($name) {
+                    'mpdf' => DriverNotAvailable::missingPackage('mpdf', 'mpdf/mpdf'),
+                    'browsershot' => DriverNotAvailable::missingPackage('browsershot', 'spatie/browsershot'),
+                    'gotenberg' => new DriverNotAvailable('The [gotenberg] engine needs the URL of a Gotenberg server in DOC_GOTENBERG_URL.'),
+                    default => new DriverNotAvailable("The [{$name}] PDF engine is not available."),
+                };
             }
         } catch (Throwable $e) {
             return $this->fallback($name, $fallback, $e, $html, $options, $htmlFor);
@@ -83,9 +89,19 @@ class PdfManager extends Manager
             throw $e;
         }
 
-        Log::warning("easy-pdf-word: [{$name}] failed, falling back to [{$fallback}]: {$e->getMessage()}");
+        // A fallback that is not installed would only hide the real error.
+        try {
+            $engine = $this->driver($fallback);
+        } catch (Throwable) {
+            throw $e;
+        }
 
-        $engine = $this->driver($fallback);
+        if (! $engine->isAvailable()) {
+            throw $e;
+        }
+
+        // Kept short: Browsershot's message holds the whole command, with the header and footer.
+        Log::warning("easy-pdf-word: [{$name}] failed, falling back to [{$fallback}]: ".Str::limit($e->getMessage(), 300));
 
         return [$this->protect($engine->render($htmlFor ? $htmlFor($engine) : $html, $options), $engine, $options), $fallback];
     }
