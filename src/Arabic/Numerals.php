@@ -24,13 +24,21 @@ class Numerals
      */
     public static function toArabic(string|int|float $value, bool $separators = true): string
     {
-        $text = str_replace(self::LATIN_DIGITS, self::ARABIC_DIGITS, self::toLatin($value));
+        // E-mail addresses and links keep their digits: info@biz2tech.com, www.site2.com/p/3.
+        $parts = preg_split('/([^\s@<>()]+@[^\s@<>()]+\.\w+|(?:https?:\/\/|www\.)[^\s<>]+)/iu', self::toLatin($value), -1, PREG_SPLIT_DELIM_CAPTURE);
 
-        if (! $separators) {
-            return $text;
+        foreach ($parts as $i => $part) {
+            if ($i % 2 === 1) {
+                continue;
+            }
+
+            $part = str_replace(self::LATIN_DIGITS, self::ARABIC_DIGITS, $part);
+            $parts[$i] = $separators
+                ? preg_replace_callback('/(?<=[٠-٩])[.,](?=[٠-٩])/u', fn ($m) => $m[0] === '.' ? '٫' : '٬', $part) ?? $part
+                : $part;
         }
 
-        return preg_replace_callback('/(?<=[٠-٩])[.,](?=[٠-٩])/u', fn ($m) => $m[0] === '.' ? '٫' : '٬', $text) ?? $text;
+        return implode('', $parts);
     }
 
     public static function toLatin(string|int|float $value): string
