@@ -6,6 +6,7 @@ use BiztechEG\EasyPdfWord\Contracts\PdfDriver;
 use BiztechEG\EasyPdfWord\Exceptions\DriverNotAvailable;
 use BiztechEG\EasyPdfWord\Pdf\PdfOptions;
 use BiztechEG\EasyPdfWord\Pdf\Watermark;
+use Illuminate\Filesystem\Filesystem;
 use Spatie\Browsershot\Browsershot;
 
 /**
@@ -55,6 +56,11 @@ class BrowsershotDriver implements PdfDriver
             $browsershot->setNpmBinary($this->config['npm_binary']);
         }
 
+        // Saves running "npm root -g" for every document.
+        if (! empty($this->config['node_modules_path'])) {
+            $browsershot->setNodeModulePath($this->config['node_modules_path']);
+        }
+
         if (! empty($this->config['chrome_path'])) {
             $browsershot->setChromePath($this->config['chrome_path']);
         }
@@ -69,7 +75,17 @@ class BrowsershotDriver implements PdfDriver
             $browsershot->disableJavascript();
         }
 
-        return $browsershot->pdf();
+        // Browsershot writes the page to a temp file and removes it only
+        // after a successful render; a folder of our own is always removed.
+        $tempPath = sys_get_temp_dir().'/easy-pdf-word-chrome-'.bin2hex(random_bytes(8));
+        @mkdir($tempPath, 0700);
+        $browsershot->setCustomTempPath($tempPath);
+
+        try {
+            return $browsershot->pdf();
+        } finally {
+            (new Filesystem)->deleteDirectory($tempPath);
+        }
     }
 
     /**
