@@ -273,19 +273,10 @@ class WordRenderer
             return;
         }
 
-        if (str_starts_with($source, 'data:')) {
-            $source = base64_decode(substr($source, strpos($source, ',') + 1));
-        } elseif (preg_match('#^https?://#i', $source) === 1) {
-            // An allowed URL, fetched here rather than by PhpWord so redirects
-            // are not followed (they could lead past the allowed hosts) and a
-            // slow server cannot hold the request.
-            $source = @file_get_contents($source, false, stream_context_create([
-                'http' => ['timeout' => 10, 'follow_location' => 0],
-            ]));
+        $source = WordImage::load($source);
 
-            if (! is_string($source) || @getimagesizefromstring($source) === false) {
-                return;
-            }
+        if ($source === null) {
+            return;
         }
 
         // An image paragraph is not marked right to left, so "start" and
