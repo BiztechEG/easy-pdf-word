@@ -97,7 +97,7 @@ class DocContext
     /** Format a number with thousands separators. Digits follow the document's numerals setting. */
     public function number(int|float|string|null $value, int $decimals = 2): HtmlString
     {
-        $formatted = number_format((float) $value, $decimals);
+        $formatted = number_format(self::toFloat($value), $decimals);
 
         // Keeps the minus sign before the digits in RTL text ("-2.3", not "2.3-").
         return new HtmlString(str_starts_with($formatted, '-') ? '<bdo dir="ltr">'.$formatted.'</bdo>' : $formatted);
@@ -109,7 +109,13 @@ class DocContext
      */
     public function numberText(int|float|string|null $value, int $decimals = 2): string
     {
-        return number_format((float) $value, $decimals);
+        return number_format(self::toFloat($value), $decimals);
+    }
+
+    /** "1,250.50" and "١٬٢٥٠٫٥٠" as 1250.5, not 1. */
+    private static function toFloat(int|float|string|null $value): float
+    {
+        return is_string($value) ? (float) str_replace([',', ' '], '', Numerals::toLatin($value)) : (float) $value;
     }
 
     /** A rate or percentage with only the decimals it needs: 14, 2.5, 0.75. */
@@ -180,7 +186,7 @@ class DocContext
     private function split(int|float|string $amount, string $currency): array
     {
         $decimals = Currency::decimals($currency);
-        $value = round((float) str_replace([',', '٬', '٫'], ['', '', '.'], Numerals::toLatin((string) $amount)), $decimals);
+        $value = round(self::toFloat($amount), $decimals);
         $per = 10 ** $decimals;
 
         return [(int) $value, (int) round(abs($value - (int) $value) * $per), $per];
