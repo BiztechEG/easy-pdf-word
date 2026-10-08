@@ -173,10 +173,13 @@ class DocxTemplateFiller
             || (preg_match('/\.(png|jpe?g|gif|bmp)$/i', $value) === 1 && is_file($value));
     }
 
+    /** A local copy of the image, read through $doc->image() so the allowed folders apply. */
     private function imageFile(string $value, DocContext $doc): ?string
     {
-        if (! str_starts_with($value, 'data:')) {
-            return $value;
+        $value = str_starts_with($value, 'data:') ? $value : $doc->image($value);
+
+        if ($value === null) {
+            return null;
         }
 
         $file = tempnam(sys_get_temp_dir(), 'easy-img');

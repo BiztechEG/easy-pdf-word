@@ -24,6 +24,8 @@ class DocContext
         public readonly string $fontCss = '',
         private readonly array $translations = [],
         private readonly array $fallbackTranslations = [],
+        private readonly ?array $imagePaths = null,
+        private readonly bool $remoteImages = true,
     ) {}
 
     public function isRtl(): bool
@@ -126,20 +128,62 @@ class DocContext
     /**
      * An image as a data URI so every engine can show it, whether it is a
      * local path, a URL or already a data URI.
+     *
+     * Only image files inside the allowed folders (config "images.paths")
+     * are read, so a path in user data cannot pull in other files. URLs are
+     * passed on unless "images.remote" is off.
      */
     public function image(?string $source): ?string
     {
-        if ($source === null || $source === '' || str_starts_with($source, 'data:') || preg_match('#^https?://#i', $source)) {
-            return $source ?: null;
-        }
-
-        if (! is_file($source)) {
+        if ($source === null || $source === '') {
             return null;
         }
 
-        $mime = mime_content_type($source) ?: 'image/png';
+        if (str_starts_with($source, 'data:')) {
+            return str_starts_with($source, 'data:image/') ? $source : null;
+        }
 
-        return 'data:'.$mime.';base64,'.base64_encode(file_get_contents($source));
+        if (preg_match('#^https?://#i', $source)) {
+            return $this->remoteImages ? $source : null;
+        }
+
+        $path = realpath($source);
+
+        if ($path === false || ! is_file($path) || ! $this->isAllowedPath($path) || ! ($mime = $this->imageMime($path))) {
+            return null;
+        }
+
+        return 'data:'.$mime.';base64,'.base64_encode(file_get_contents($path));
+    }
+
+    private function isAllowedPath(string $path): bool
+    {
+        if ($this->imagePaths === null) {
+            return true;
+        }
+
+        foreach ($this->imagePaths as $base) {
+            $base = realpath((string) $base);
+
+            if ($base !== false && str_starts_with($path, rtrim($base, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function imageMime(string $path): ?string
+    {
+        $info = @getimagesize($path);
+
+        if ($info !== false && str_starts_with($info['mime'], 'image/')) {
+            return $info['mime'];
+        }
+
+        $head = (string) file_get_contents($path, false, null, 0, 512);
+
+        return str_ends_with(strtolower($path), '.svg') && preg_match('/<svg[\s>]/i', $head) ? 'image/svg+xml' : null;
     }
 
     public function usesCssFonts(): bool
