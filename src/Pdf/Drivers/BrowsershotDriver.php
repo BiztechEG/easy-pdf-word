@@ -4,6 +4,7 @@ namespace BiztechEG\EasyPdfWord\Pdf\Drivers;
 
 use BiztechEG\EasyPdfWord\Contracts\PdfDriver;
 use BiztechEG\EasyPdfWord\Exceptions\DriverNotAvailable;
+use BiztechEG\EasyPdfWord\Fonts\FontRegistry;
 use BiztechEG\EasyPdfWord\Pdf\PdfOptions;
 use BiztechEG\EasyPdfWord\Pdf\Watermark;
 use Illuminate\Filesystem\Filesystem;
@@ -15,7 +16,10 @@ use Spatie\Browsershot\Browsershot;
  */
 class BrowsershotDriver implements PdfDriver
 {
-    public function __construct(private array $config = []) {}
+    public function __construct(
+        private array $config = [],
+        private ?FontRegistry $fonts = null,
+    ) {}
 
     public function isAvailable(): bool
     {
@@ -43,9 +47,12 @@ class BrowsershotDriver implements PdfDriver
             ->timeout((int) ($this->config['timeout'] ?? 60));
 
         if ($options->header || $options->footer) {
+            // The templates carry the embedded font, too big for a command
+            // line argument, so the options go to a file.
             $browsershot->showBrowserHeaderAndFooter()
                 ->headerHtml($this->chromeTemplate($options->header ?? '', $options))
-                ->footerHtml($this->chromeTemplate($options->footer ?? '', $options));
+                ->footerHtml($this->chromeTemplate($options->footer ?? '', $options))
+                ->writeOptionsToFile();
         }
 
         if (! empty($this->config['node_binary'])) {
@@ -100,8 +107,12 @@ class BrowsershotDriver implements PdfDriver
             $html
         );
 
-        return '<div dir="'.$options->direction.'" style="width:100%;font-size:9px;padding:0 '
-            .$options->margins[1].'mm 0 '.$options->margins[3].'mm;font-family:'.$options->font.',sans-serif;">'
+        // Chrome draws headers and footers apart from the page, without its
+        // fonts: without its own @font-face, Arabic falls back to a system font.
+        $fonts = $this->fonts ? '<style>'.$this->fonts->cssFontFaces([$options->font]).'</style>' : '';
+
+        return $fonts.'<div dir="'.$options->direction.'" style="width:100%;font-size:9px;padding:0 '
+            .$options->margins[1].'mm 0 '.$options->margins[3].'mm;font-family:\''.$options->font.'\',sans-serif;">'
             .$html.'</div>';
     }
 }

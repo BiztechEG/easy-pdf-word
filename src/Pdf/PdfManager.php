@@ -135,11 +135,11 @@ class PdfManager extends Manager
 
     protected function createBrowsershotDriver(): PdfDriver
     {
-        return new BrowsershotDriver($this->engineConfig('browsershot'));
+        return new BrowsershotDriver($this->engineConfig('browsershot'), $this->container->make(FontRegistry::class));
     }
 
     protected function createGotenbergDriver(): PdfDriver
     {
-        return new GotenbergDriver($this->container->make(Http::class), $this->engineConfig('gotenberg'));
+        return new GotenbergDriver($this->container->make(Http::class), $this->engineConfig('gotenberg'), $this->container->make(FontRegistry::class));
     }
 }

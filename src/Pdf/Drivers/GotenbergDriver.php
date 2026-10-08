@@ -3,6 +3,7 @@
 namespace BiztechEG\EasyPdfWord\Pdf\Drivers;
 
 use BiztechEG\EasyPdfWord\Contracts\PdfDriver;
+use BiztechEG\EasyPdfWord\Fonts\FontRegistry;
 use BiztechEG\EasyPdfWord\Pdf\PdfOptions;
 use BiztechEG\EasyPdfWord\Pdf\Watermark;
 use Illuminate\Http\Client\Factory as Http;
@@ -20,6 +21,7 @@ class GotenbergDriver implements PdfDriver
     public function __construct(
         private Http $http,
         private array $config = [],
+        private ?FontRegistry $fonts = null,
     ) {}
 
     public function isAvailable(): bool
@@ -100,8 +102,12 @@ class GotenbergDriver implements PdfDriver
             $html
         );
 
-        return '<!doctype html><html><head><meta charset="utf-8"></head><body dir="'.$options->direction
-            .'" style="font-size:9px;margin:0 '.$options->margins[1].'mm 0 '.$options->margins[3].'mm;">'
+        // Chrome draws headers and footers apart from the page, without its
+        // fonts: without its own @font-face, Arabic falls back to a system font.
+        $fonts = $this->fonts ? '<style>'.$this->fonts->cssFontFaces([$options->font]).'</style>' : '';
+
+        return '<!doctype html><html><head><meta charset="utf-8">'.$fonts.'</head><body dir="'.$options->direction
+            .'" style="font-size:9px;margin:0 '.$options->margins[1].'mm 0 '.$options->margins[3].'mm;font-family:\''.$options->font.'\',sans-serif;">'
             .$html.'</body></html>';
     }
 }
