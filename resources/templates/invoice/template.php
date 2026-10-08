@@ -41,7 +41,10 @@ return [
         'qr' => null,
     ],
 
-    'prepare' => function (array $data): array {
+    'prepare' => function (array $data, array $theme = []): array {
+        // The seller defaults to the company in the theme (config or ->theme()).
+        $data['seller'] = array_merge((array) ($theme['company'] ?? []), array_filter((array) ($data['seller'] ?? []), fn ($v) => $v !== null && $v !== ''));
+
         $rate = (float) ($data['invoice']['tax_rate'] ?? 0);
         $subtotal = $discount = 0.0;
 

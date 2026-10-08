@@ -78,7 +78,8 @@ class MpdfDriver implements PdfDriver
 
         return [
             'mode' => 'utf-8',
-            'format' => $options->paperSize(),
+            // mPDF turns the page itself for "L", so it gets the upright size.
+            'format' => [min($options->paperSize()), max($options->paperSize())],
             'orientation' => $options->isLandscape() ? 'L' : 'P',
             'margin_top' => $top,
             'margin_right' => $right,

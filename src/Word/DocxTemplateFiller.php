@@ -32,6 +32,9 @@ use Stringable;
  */
 class DocxTemplateFiller
 {
+    /** @var string[] temporary files, removed after each fill */
+    private array $temporary = [];
+
     public function fill(string $path, array $data, DocContext $doc): string
     {
         if (! class_exists(TemplateProcessor::class)) {
@@ -62,10 +65,9 @@ class DocxTemplateFiller
                 $processor->setValue($variable, $this->text($value, $doc));
             }
 
-            $file = tempnam(sys_get_temp_dir(), 'easy-docx');
+            $file = $this->temporary[] = tempnam(sys_get_temp_dir(), 'easy-docx');
             $processor->saveAs($file);
             $content = (string) file_get_contents($file);
-            @unlink($file);
 
             return $content;
         } finally {
@@ -73,9 +75,6 @@ class DocxTemplateFiller
             $this->cleanup();
         }
     }
-
-    /** @var string[] temporary image files */
-    private array $temporary = [];
 
     /**
      * Repeat a table row for each item of a list, e.g. ${items.description}.
@@ -124,7 +123,7 @@ class DocxTemplateFiller
         $date = $data['date'] ?? $data['invoice']['date'] ?? null;
 
         return array_filter([
-            'doc.hijri_date' => $date ? $doc->hijri($date) : null,
+            'doc.hijri_date' => $date && $doc->hasHijri() ? $doc->hijri($date) : null,
             'doc.today' => now()->format('Y/m/d'),
             'doc.qr' => ! empty($data['qr']) && is_string($data['qr']) ? Qr::dataUri($data['qr']) : null,
         ], fn ($value) => $value !== null);
@@ -174,10 +173,13 @@ class DocxTemplateFiller
             || (preg_match('/\.(png|jpe?g|gif|bmp)$/i', $value) === 1 && is_file($value));
     }
 
+    /** A local copy of the image, read through $doc->image() so the allowed folders apply. */
     private function imageFile(string $value, DocContext $doc): ?string
     {
-        if (! str_starts_with($value, 'data:')) {
-            return $value;
+        $value = str_starts_with($value, 'data:') ? $value : $doc->image($value);
+
+        if ($value === null) {
+            return null;
         }
 
         $file = tempnam(sys_get_temp_dir(), 'easy-img');

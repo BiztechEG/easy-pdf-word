@@ -1,5 +1,5 @@
 @php
-    $seller = array_merge((array) $doc->theme('company', []), $seller ?? []);
+    $seller = $seller ?? [];
     $primary = $doc->theme('primary', '#0F766E');
     $border = $doc->theme('border', '#E5E7EB');
     $currency = $invoice['currency'];
@@ -42,7 +42,7 @@
                 <table class="meta">
                     <tr><td class="label">{{ $doc->t('number') }}</td><td>{{ $doc->ltr($invoice['number']) }}</td></tr>
                     <tr><td class="label">{{ $doc->t('date') }}</td><td>{{ \Illuminate\Support\Carbon::parse($invoice['date'])->format('Y/m/d') }}</td></tr>
-                    @if ($doc->isRtl())
+                    @if ($doc->isRtl() && $doc->hasHijri())
                         <tr><td class="label">{{ $doc->t('hijri_date') }}</td><td>{{ $doc->hijri($invoice['date']) }}</td></tr>
                     @endif
                     @if (! empty($invoice['due_date']))

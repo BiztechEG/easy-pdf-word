@@ -11,7 +11,7 @@
         return match ($column['format']) {
             'number', 'money' => $value === null || $value === '' ? '' : $doc->number($value, $column['decimals']),
             'date' => $value ? \Illuminate\Support\Carbon::parse($value)->format('Y/m/d') : '',
-            default => $value,
+            default => $doc->text($value),
         };
     };
 @endphp

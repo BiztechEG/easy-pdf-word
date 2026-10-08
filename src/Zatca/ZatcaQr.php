@@ -5,6 +5,7 @@ namespace BiztechEG\EasyPdfWord\Zatca;
 use BiztechEG\EasyPdfWord\Support\Qr;
 use DateTimeInterface;
 use Illuminate\Support\Carbon;
+use InvalidArgumentException;
 
 /**
  * QR payload for Saudi simplified tax invoices (ZATCA phase 1): five TLV
@@ -46,6 +47,10 @@ class ZatcaQr
         $tlv = '';
 
         foreach ($fields as $index => $value) {
+            if (strlen($value) > 255) {
+                throw new InvalidArgumentException('ZATCA QR field '.($index + 1).' is longer than 255 bytes: '.mb_substr($value, 0, 40).'...');
+            }
+
             $tlv .= chr($index + 1).chr(strlen($value)).$value;
         }
 

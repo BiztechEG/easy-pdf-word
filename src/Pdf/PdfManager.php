@@ -59,19 +59,33 @@ class PdfManager extends Manager
             if (! $engine->isAvailable()) {
                 throw new DriverNotAvailable("The [{$name}] PDF engine is not available.");
             }
-
-            return [$engine->render($htmlFor ? $htmlFor($engine) : $html, $options), $name];
         } catch (Throwable $e) {
-            if ($fallback === null || $fallback === $name) {
-                throw $e;
-            }
-
-            Log::warning("easy-pdf-word: [{$name}] failed, falling back to [{$fallback}]: {$e->getMessage()}");
-
-            $engine = $this->driver($fallback);
-
-            return [$engine->render($htmlFor ? $htmlFor($engine) : $html, $options), $fallback];
+            return $this->fallback($name, $fallback, $e, $html, $options, $htmlFor);
         }
+
+        // Errors in the document itself (a view, invalid data) are not the
+        // engine's fault, so they are thrown rather than retried.
+        $content = $htmlFor ? $htmlFor($engine) : $html;
+
+        try {
+            return [$engine->render($content, $options), $name];
+        } catch (Throwable $e) {
+            return $this->fallback($name, $fallback, $e, $html, $options, $htmlFor);
+        }
+    }
+
+    /** @return array{0: string, 1: string} */
+    private function fallback(string $name, ?string $fallback, Throwable $e, string $html, PdfOptions $options, ?callable $htmlFor): array
+    {
+        if ($fallback === null || $fallback === $name) {
+            throw $e;
+        }
+
+        Log::warning("easy-pdf-word: [{$name}] failed, falling back to [{$fallback}]: {$e->getMessage()}");
+
+        $engine = $this->driver($fallback);
+
+        return [$engine->render($htmlFor ? $htmlFor($engine) : $html, $options), $fallback];
     }
 
     public function engineConfig(string $name): array
