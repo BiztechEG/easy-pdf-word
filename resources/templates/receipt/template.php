@@ -33,6 +33,7 @@ return [
         'reference' => ['nullable', 'string'],
         'notes' => ['nullable', 'string'],
         'signatures' => ['nullable', 'array'],
+        'signatures.*' => ['string'],
     ],
 
     'defaults' => [

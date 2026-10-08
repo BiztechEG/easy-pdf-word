@@ -8,9 +8,11 @@ use BiztechEG\EasyPdfWord\Fonts\FontRegistry;
 use BiztechEG\EasyPdfWord\Pdf\Drivers\BrowsershotDriver;
 use BiztechEG\EasyPdfWord\Pdf\Drivers\GotenbergDriver;
 use BiztechEG\EasyPdfWord\Pdf\Drivers\MpdfDriver;
+use Closure;
 use Illuminate\Http\Client\Factory as Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Manager;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -27,6 +29,12 @@ class PdfManager extends Manager
     public function getDefaultDriver(): string
     {
         return $this->config->get('easy-pdf-word.pdf.driver', 'mpdf');
+    }
+
+    /** Engine names are matched without case, as driver() lowercases them. */
+    public function extend($driver, Closure $callback)
+    {
+        return parent::extend(strtolower($driver), $callback);
     }
 
     public function normalize(?string $driver): string
@@ -57,7 +65,12 @@ class PdfManager extends Manager
             $engine = $this->driver($name);
 
             if (! $engine->isAvailable()) {
-                throw new DriverNotAvailable("The [{$name}] PDF engine is not available.");
+                throw match ($name) {
+                    'mpdf' => DriverNotAvailable::missingPackage('mpdf', 'mpdf/mpdf'),
+                    'browsershot' => DriverNotAvailable::missingPackage('browsershot', 'spatie/browsershot'),
+                    'gotenberg' => new DriverNotAvailable('The [gotenberg] engine needs the URL of a Gotenberg server in DOC_GOTENBERG_URL.'),
+                    default => new DriverNotAvailable("The [{$name}] PDF engine is not available."),
+                };
             }
         } catch (Throwable $e) {
             return $this->fallback($name, $fallback, $e, $html, $options, $htmlFor);
@@ -83,9 +96,19 @@ class PdfManager extends Manager
             throw $e;
         }
 
-        Log::warning("easy-pdf-word: [{$name}] failed, falling back to [{$fallback}]: {$e->getMessage()}");
+        // A fallback that is not installed would only hide the real error.
+        try {
+            $engine = $this->driver($fallback);
+        } catch (Throwable) {
+            throw $e;
+        }
 
-        $engine = $this->driver($fallback);
+        if (! $engine->isAvailable()) {
+            throw $e;
+        }
+
+        // Kept short: Browsershot's message holds the whole command, with the header and footer.
+        Log::warning("easy-pdf-word: [{$name}] failed, falling back to [{$fallback}]: ".Str::limit($e->getMessage(), 300));
 
         return [$this->protect($engine->render($htmlFor ? $htmlFor($engine) : $html, $options), $engine, $options), $fallback];
     }
@@ -112,11 +135,11 @@ class PdfManager extends Manager
 
     protected function createBrowsershotDriver(): PdfDriver
     {
-        return new BrowsershotDriver($this->engineConfig('browsershot'));
+        return new BrowsershotDriver($this->engineConfig('browsershot'), $this->container->make(FontRegistry::class));
     }
 
     protected function createGotenbergDriver(): PdfDriver
     {
-        return new GotenbergDriver($this->container->make(Http::class), $this->engineConfig('gotenberg'));
+        return new GotenbergDriver($this->container->make(Http::class), $this->engineConfig('gotenberg'), $this->container->make(FontRegistry::class));
     }
 }

@@ -31,7 +31,7 @@ return function (DocumentBuilder $voucher, array $data, DocContext $doc): void {
             [['text' => $doc->t('number').': ', 'size' => 9.5], ['text' => (string) $data['number'], 'size' => 9.5, 'ltr' => true]],
             ['text' => $doc->t('date').': '.$date($data['date']), 'size' => 9.5],
         ], 'align' => 'end'],
-    ]], ['columns' => [38, 24, 38], 'borders' => false]);
+    ]], ['columns' => [32, 36, 32], 'borders' => false]);
     $voucher->line($primary);
 
     // The amount in a box.
@@ -73,13 +73,14 @@ return function (DocumentBuilder $voucher, array $data, DocContext $doc): void {
         $voucher->paragraph($doc->t('notes').': '.$data['notes'], ['color' => $muted, 'size' => 9]);
     }
 
-    // Signature boxes.
-    $voucher->spacer(6);
+    // Signature boxes: known roles are translated, anything else is printed as it is.
+    $label = fn (string $who) => $doc->t('signature_labels.'.$who) === 'signature_labels.'.$who ? $who : $doc->t('signature_labels.'.$who);
+    $voucher->spacer(4);
     $voucher->table([array_map(fn ($who) => [
         'lines' => [
-            ['text' => $doc->t('signature_labels.'.$who), 'bold' => true, 'align' => 'center'],
-            ['text' => ' ', 'size' => 22],
+            ['text' => $label($who), 'bold' => true, 'align' => 'center'],
+            ['text' => ' ', 'size' => 14],
             ['text' => '....................', 'color' => $muted, 'align' => 'center'],
         ],
-    ], $data['signatures'])], ['borders' => false]);
+    ], array_values($data['signatures']))], ['borders' => false]);
 };

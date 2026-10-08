@@ -52,9 +52,7 @@ return [
         $data['parties'] = array_values($data['parties']);
         $data['preamble_paragraphs'] = $lines($data['preamble'] ?? null);
 
-        foreach (array_values($data['clauses']) as $i => $clause) {
-            $data['clauses'][$i] = $clause + ['paragraphs' => $lines($clause['text'])];
-        }
+        $data['clauses'] = array_map(fn (array $clause) => $clause + ['paragraphs' => $lines($clause['text'])], array_values($data['clauses']));
 
         return $data;
     },

@@ -48,13 +48,14 @@ return [
     'prepare' => function (array $data, array $theme = []): array {
         $data['issuer'] = ($data['issuer'] ?? null) ?: ($theme['company']['name'] ?? '');
 
-        // Arabic counts take a different word form: ساعة واحدة، ساعتين، 5 ساعات، 40 ساعة.
+        // Arabic counts take a different word form: ساعة واحدة، ساعتين، 5 ساعات، 40 ساعة،
+        // and past 100 the last two digits decide: 103 ساعات، 140 ساعة.
         if (isset($data['hours']) && $data['hours'] !== '') {
             $hours = (float) $data['hours'];
             $data['hours_form'] = match (true) {
                 $hours == 1 => 'one',
                 $hours == 2 => 'two',
-                floor($hours) == $hours && $hours >= 3 && $hours <= 10 => 'few',
+                floor($hours) == $hours && (int) $hours % 100 >= 3 && (int) $hours % 100 <= 10 => 'few',
                 default => 'many',
             };
         }

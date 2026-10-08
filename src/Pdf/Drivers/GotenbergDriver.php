@@ -3,6 +3,7 @@
 namespace BiztechEG\EasyPdfWord\Pdf\Drivers;
 
 use BiztechEG\EasyPdfWord\Contracts\PdfDriver;
+use BiztechEG\EasyPdfWord\Fonts\FontRegistry;
 use BiztechEG\EasyPdfWord\Pdf\PdfOptions;
 use BiztechEG\EasyPdfWord\Pdf\Watermark;
 use Illuminate\Http\Client\Factory as Http;
@@ -20,6 +21,7 @@ class GotenbergDriver implements PdfDriver
     public function __construct(
         private Http $http,
         private array $config = [],
+        private ?FontRegistry $fonts = null,
     ) {}
 
     public function isAvailable(): bool
@@ -39,7 +41,7 @@ class GotenbergDriver implements PdfDriver
 
         $request = $this->http
             ->timeout((int) ($this->config['timeout'] ?? 60))
-            ->attach('files', Watermark::inject($html, $options), 'index.html');
+            ->attach('files', $this->withoutScripts(Watermark::inject($html, $options)), 'index.html');
 
         foreach (['header' => $options->header, 'footer' => $options->footer] as $name => $part) {
             if ($part) {
@@ -61,7 +63,30 @@ class GotenbergDriver implements PdfDriver
             throw new RuntimeException("Gotenberg returned HTTP {$response->status()}: ".substr($response->body(), 0, 300));
         }
 
+        // A proxy or a wrong URL can answer 200 with a web page.
+        if (! str_starts_with($response->body(), '%PDF-')) {
+            throw new RuntimeException('Gotenberg did not return a PDF; check DOC_GOTENBERG_URL. It returned: '.substr(strip_tags($response->body()), 0, 200));
+        }
+
         return $response->body();
+    }
+
+    /**
+     * Gotenberg has no per request switch for JavaScript, so a policy in the
+     * page turns it off, as Browsershot does: HTML that slipped into the data
+     * cannot make the browser request other pages or files.
+     */
+    private function withoutScripts(string $html): string
+    {
+        if (! empty($this->config['javascript'])) {
+            return $html;
+        }
+
+        $policy = '<meta http-equiv="Content-Security-Policy" content="script-src \'none\'">';
+        $count = 0;
+        $html = preg_replace('/<head\b[^>]*>/i', '$0'.$policy, $html, 1, $count) ?? $html;
+
+        return $count === 1 ? $html : $policy.$html;
     }
 
     private function inches(float $mm): string
@@ -77,8 +102,12 @@ class GotenbergDriver implements PdfDriver
             $html
         );
 
-        return '<!doctype html><html><head><meta charset="utf-8"></head><body dir="'.$options->direction
-            .'" style="font-size:9px;margin:0 '.$options->margins[1].'mm 0 '.$options->margins[3].'mm;">'
+        // Chrome draws headers and footers apart from the page, without its
+        // fonts: without its own @font-face, Arabic falls back to a system font.
+        $fonts = $this->fonts ? '<style>'.$this->fonts->cssFontFaces([$options->font]).'</style>' : '';
+
+        return '<!doctype html><html><head><meta charset="utf-8">'.$fonts.'</head><body dir="'.$options->direction
+            .'" style="font-size:9px;margin:0 '.$options->margins[1].'mm 0 '.$options->margins[3].'mm;font-family:\''.$options->font.'\',sans-serif;">'
             .$html.'</body></html>';
     }
 }

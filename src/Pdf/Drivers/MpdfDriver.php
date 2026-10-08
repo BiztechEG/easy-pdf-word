@@ -76,7 +76,19 @@ class MpdfDriver implements PdfDriver
             self::protect($mpdf, $options->protection);
         }
 
-        $mpdf->WriteHTML($html);
+        // mPDF refuses HTML longer than pcre.backtrack_limit (1,000,000
+        // bytes by default): a long report, or a large logo inlined as data.
+        $limit = ini_get('pcre.backtrack_limit');
+
+        if ((int) $limit < strlen($html) * 2) {
+            ini_set('pcre.backtrack_limit', (string) (strlen($html) * 2));
+        }
+
+        try {
+            $mpdf->WriteHTML($html);
+        } finally {
+            ini_set('pcre.backtrack_limit', $limit);
+        }
 
         return $mpdf->Output('', Destination::STRING_RETURN);
     }
@@ -88,17 +100,34 @@ class MpdfDriver implements PdfDriver
         $mpdf->SetProtection($protection['allow'], $protection['user'], $protection['owner'], 128);
     }
 
+    /**
+     * mPDF's font cache and work files. By default a folder per system user
+     * that only they can open: the web server and a queue worker often run
+     * as different users, and on shared hosting other sites share /tmp.
+     */
+    public static function tempDir(?string $configured = null): string
+    {
+        $user = function_exists('posix_geteuid') ? (string) posix_geteuid() : substr(md5((string) (getenv('USERNAME') ?: get_current_user())), 0, 8);
+        $dir = $configured ?: sys_get_temp_dir().'/easy-pdf-word-'.$user;
+
+        if (! is_dir($dir) && ! @mkdir($dir, $configured ? 0775 : 0700, true) && ! is_dir($dir)) {
+            throw new \RuntimeException("Cannot create the mPDF temp folder [{$dir}]. Set a writable folder in easy-pdf-word.pdf.drivers.mpdf.temp_dir.");
+        }
+
+        if (! is_writable($dir)) {
+            throw new \RuntimeException("The mPDF temp folder [{$dir}] is not writable. Set a writable folder in easy-pdf-word.pdf.drivers.mpdf.temp_dir.");
+        }
+
+        return $dir;
+    }
+
     private function mpdfConfig(PdfOptions $options): array
     {
         [$fontDirs, $fontdata] = $this->fonts->forMpdf((int) ($this->config['use_kashida'] ?? 75));
         [$top, $right, $bottom, $left] = $options->margins;
         $arabicFont = $this->fonts->supportsArabic($options->font) ? strtolower($options->font) : 'cairo';
 
-        $tempDir = $this->config['temp_dir'] ?? null ?: sys_get_temp_dir().'/easy-pdf-word';
-
-        if (! is_dir($tempDir)) {
-            @mkdir($tempDir, 0775, true);
-        }
+        $tempDir = self::tempDir($this->config['temp_dir'] ?? null);
 
         return [
             'mode' => 'utf-8',
@@ -124,6 +153,10 @@ class MpdfDriver implements PdfDriver
             // (Chinese, Hindi, ...); Arabic text then keeps the document font.
             'autoLangToFont' => (bool) ($this->config['auto_lang_to_font'] ?? false),
             'languageToFont' => new ArabicLanguageToFont($arabicFont),
+            // Allowed remote images: no redirects past the allowed hosts, and
+            // a slow server cannot hold the request.
+            'curlFollowLocation' => false,
+            'curlExecutionTimeout' => 10,
         ];
     }
 

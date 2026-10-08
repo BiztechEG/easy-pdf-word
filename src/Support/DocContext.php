@@ -97,7 +97,7 @@ class DocContext
     /** Format a number with thousands separators. Digits follow the document's numerals setting. */
     public function number(int|float|string|null $value, int $decimals = 2): HtmlString
     {
-        $formatted = number_format(self::toFloat($value), $decimals);
+        $formatted = number_format(self::toFloat($value), self::clampDecimals($decimals));
 
         // Keeps the minus sign before the digits in RTL text ("-2.3", not "2.3-").
         return new HtmlString(str_starts_with($formatted, '-') ? '<bdo dir="ltr">'.$formatted.'</bdo>' : $formatted);
@@ -109,11 +109,17 @@ class DocContext
      */
     public function numberText(int|float|string|null $value, int $decimals = 2): string
     {
-        return number_format(self::toFloat($value), $decimals);
+        return number_format(self::toFloat($value), self::clampDecimals($decimals));
+    }
+
+    /** Decimals can come from data (a report column), so a huge value must not build a huge string. */
+    private static function clampDecimals(int $decimals): int
+    {
+        return max(0, min(10, $decimals));
     }
 
     /** "1,250.50" and "١٬٢٥٠٫٥٠" as 1250.5, not 1. */
-    private static function toFloat(int|float|string|null $value): float
+    public static function toFloat(int|float|string|null $value): float
     {
         return is_string($value) ? (float) str_replace([',', ' '], '', Numerals::toLatin($value)) : (float) $value;
     }
@@ -121,7 +127,7 @@ class DocContext
     /** A rate or percentage with only the decimals it needs: 14, 2.5, 0.75. */
     public function rate(int|float|string|null $value): string
     {
-        return rtrim(rtrim(number_format((float) $value, 2, '.', ''), '0'), '.');
+        return rtrim(rtrim(number_format(self::toFloat($value), 2, '.', ''), '0'), '.');
     }
 
     public function money(int|float|string|null $value, ?string $currency = null, int $decimals = 2): HtmlString
@@ -143,7 +149,9 @@ class DocContext
         }
 
         [$integer, $fraction, $per] = $this->split($amount, $currency);
-        $text = Tafqeet::words($integer).' '.strtoupper($currency).($fraction > 0 ? ' و'.$fraction.'/'.$per : '');
+        // -0.50 has no minus in its whole part, but is still negative.
+        $minus = $integer === 0 && self::toFloat($amount) < 0 && $fraction > 0 ? 'سالب ' : '';
+        $text = $minus.Tafqeet::words($integer).' '.strtoupper($currency).($fraction > 0 ? ' و'.$fraction.'/'.$per : '');
 
         return $only ? 'فقط '.$text.' لا غير' : $text;
     }
@@ -166,7 +174,13 @@ class DocContext
         }
 
         [$integer, $fraction, $per] = $this->split($amount, $currency);
-        $words = (new \NumberFormatter($language, \NumberFormatter::SPELLOUT))->format($integer);
+        $formatter = new \NumberFormatter($language, \NumberFormatter::SPELLOUT);
+        $words = $formatter->format($integer);
+
+        // -0.50: the language's word for minus ("minus", "moins"), as the whole part has none.
+        if ($integer === 0 && self::toFloat($amount) < 0 && $fraction > 0) {
+            $words = trim(str_replace($formatter->format(1), '', $formatter->format(-1))).' '.$words;
+        }
 
         return trim($words.' '.strtoupper($currency).($fraction > 0 ? ' and '.$fraction.'/'.$per : '').($only ? ' only' : ''));
     }

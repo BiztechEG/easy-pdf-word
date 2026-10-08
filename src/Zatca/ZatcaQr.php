@@ -2,6 +2,7 @@
 
 namespace BiztechEG\EasyPdfWord\Zatca;
 
+use BiztechEG\EasyPdfWord\Support\DocContext;
 use BiztechEG\EasyPdfWord\Support\Qr;
 use DateTimeInterface;
 use Illuminate\Support\Carbon;
@@ -30,14 +31,20 @@ class ZatcaQr
         int|float|string $total,
         int|float|string $vatTotal,
     ): self {
-        $time = $timestamp instanceof DateTimeInterface ? Carbon::instance($timestamp) : Carbon::parse($timestamp);
+        $time = match (true) {
+            $timestamp instanceof DateTimeInterface => Carbon::instance($timestamp),
+            // A date alone ("2026-10-08") keeps its day: read as local
+            // midnight, it would become the day before in UTC east of UTC.
+            preg_match('#^\s*\d{4}[-/]\d{1,2}[-/]\d{1,2}\s*$#', $timestamp) === 1 => Carbon::parse($timestamp, 'UTC'),
+            default => Carbon::parse($timestamp),
+        };
 
         return new self(
             $sellerName,
             $vatNumber,
             $time->utc()->format('Y-m-d\TH:i:s\Z'),
-            number_format((float) $total, 2, '.', ''),
-            number_format((float) $vatTotal, 2, '.', ''),
+            number_format(DocContext::toFloat($total), 2, '.', ''),
+            number_format(DocContext::toFloat($vatTotal), 2, '.', ''),
         );
     }
 

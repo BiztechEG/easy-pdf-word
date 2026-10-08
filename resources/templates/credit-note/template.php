@@ -2,6 +2,7 @@
 
 use BiztechEG\EasyPdfWord\Support\Currency;
 use BiztechEG\EasyPdfWord\Zatca\ZatcaQr;
+use Illuminate\Validation\ValidationException;
 
 /*
 | Credit or debit note (إشعار دائن / إشعار مدين) against an issued invoice:
@@ -56,9 +57,17 @@ return [
         $subtotal = $discount = 0.0;
 
         // Each line is rounded, so the lines add up to the subtotal.
+        // Numbered 1, 2, 3 ... whatever the keys (a filtered collection keeps its keys).
+        $data['items'] = array_values($data['items']);
+
         foreach ($data['items'] as $i => $item) {
             $gross = round((float) $item['quantity'] * (float) $item['unit_price'], $decimals);
             $itemDiscount = round((float) ($item['discount'] ?? 0), $decimals);
+
+            if ($itemDiscount > $gross) {
+                throw ValidationException::withMessages(["items.{$i}.discount" => 'The discount cannot be more than the line amount (quantity × unit price).']);
+            }
+
             $data['items'][$i]['total'] = round($gross - $itemDiscount, $decimals);
             $subtotal += $gross;
             $discount += $itemDiscount;

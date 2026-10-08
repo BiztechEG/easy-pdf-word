@@ -35,6 +35,9 @@ class DocxTemplateFiller
     /** @var string[] temporary files, removed after each fill */
     private array $temporary = [];
 
+    /** Decimals for amounts: those of the document's currency (KWD 3, EGP 2). */
+    private int $decimals = 2;
+
     public function fill(string $path, array $data, DocContext $doc): string
     {
         if (! class_exists(TemplateProcessor::class)) {
@@ -45,9 +48,13 @@ class DocxTemplateFiller
         Settings::setOutputEscapingEnabled(true);
 
         try {
-            $processor = new TemplateProcessor($path);
+            $currency = $data['currency'] ?? $data['invoice']['currency'] ?? $data['document']['currency'] ?? null;
+            $this->decimals = $doc->decimals(is_string($currency) ? $currency : null);
             $values = $this->flatten($data + ['theme' => $doc->theme, 't' => $doc->translations()]);
             $values += $this->extras($data, $doc);
+            $processor = new TemplateProcessor($path);
+            // PhpWord's working copy of the template, left behind if anything below throws.
+            $this->temporary[] = $processor->getTempDocumentFilename();
             $variables = $processor->getVariables();
 
             $this->fillRows($processor, $data, $variables, $doc);
@@ -55,15 +62,18 @@ class DocxTemplateFiller
             foreach (array_unique($processor->getVariables()) as $variable) {
                 $name = explode(':', $variable)[0];
                 $value = $values[$name] ?? null;
+                // Read through $doc->image(), so the allowed folders and hosts apply.
+                $source = $this->isImage($value) ? $doc->image($value) : null;
 
-                if ($this->isImage($value) && ($image = $this->imageFile($value, $doc))) {
+                if ($source !== null && ($image = $this->imageFile($source))) {
                     $processor->setImageValue($name, $this->imageOptions($variable, $image));
 
                     continue;
                 }
 
-                // An image that cannot be used leaves the placeholder empty rather than printing the data URI.
-                $processor->setValue($variable, is_string($value) && str_starts_with($value, 'data:') ? '' : $this->text($value, $doc));
+                // An image Word cannot show (SVG) or may not read leaves the
+                // placeholder empty rather than printing a data URI or a path.
+                $processor->setValue($variable, $source !== null || (is_string($value) && str_starts_with($value, 'data:')) ? '' : $this->text($value, $doc));
             }
 
             $file = $this->temporary[] = tempnam(sys_get_temp_dir(), 'easy-docx');
@@ -83,9 +93,11 @@ class DocxTemplateFiller
     private function fillRows(TemplateProcessor $processor, array $data, array $variables, DocContext $doc): void
     {
         foreach ($data as $key => $list) {
-            if (! is_array($list) || ! array_is_list($list) || $list === [] || ! is_array($list[0])) {
+            if (! is_array($list) || $list === [] || ! self::isList($list) || ! is_array(reset($list))) {
                 continue;
             }
+
+            $list = array_values($list);
 
             $first = collect($variables)->first(fn ($v) => str_starts_with($v, $key.'.'));
 
@@ -136,10 +148,10 @@ class DocxTemplateFiller
         $flat = [];
 
         foreach ($data as $key => $value) {
-            if (is_array($value) && ! array_is_list($value)) {
+            if (is_array($value) && ! self::isList($value)) {
                 $flat += $this->flatten($value, $prefix.$key.'.');
             } elseif (is_array($value)) {
-                if ($value === [] || ! is_array($value[0] ?? null)) {
+                if ($value === [] || ! is_array(reset($value))) {
                     $flat[$prefix.$key] = implode('، ', array_map('strval', $value));
                 }
             } else {
@@ -150,12 +162,18 @@ class DocxTemplateFiller
         return $flat;
     }
 
+    /** A list of rows, also when filtering left gaps in its keys (0, 2, 5). */
+    private static function isList(array $value): bool
+    {
+        return array_is_list($value) || array_filter(array_keys($value), 'is_string') === [];
+    }
+
     private function text(mixed $value, DocContext $doc): string
     {
         $text = match (true) {
             $value === null => '',
             is_bool($value) => $value ? '✓' : '',
-            is_float($value) => $doc->numberText($value),
+            is_float($value) => $doc->numberText($value, $this->decimals),
             $value instanceof DateTimeInterface => $value->format('Y/m/d'),
             is_scalar($value), $value instanceof Stringable => (string) $value,
             default => '',
@@ -172,27 +190,15 @@ class DocxTemplateFiller
     private function isImage(mixed $value): bool
     {
         return is_string($value)
-            && (str_starts_with($value, 'data:image/') || preg_match('/\.(png|jpe?g|gif|bmp)$/i', $value) === 1);
+            && (str_starts_with($value, 'data:image/') || preg_match('/\.(png|jpe?g|gif|bmp|webp|svg)$/i', $value) === 1);
     }
 
-    /**
-     * A local copy of the image, read through $doc->image() so the allowed
-     * folders and hosts apply. Null when the image cannot be used.
-     */
-    private function imageFile(string $value, DocContext $doc): ?string
+    /** A local copy of an allowed image, for PhpWord. Null when Word cannot show it. */
+    private function imageFile(string $source): ?string
     {
-        $value = $doc->image($value);
+        $bytes = WordImage::load($source);
 
-        $bytes = match (true) {
-            $value === null => null,
-            str_starts_with($value, 'data:') => base64_decode(substr($value, strpos($value, ',') + 1), true),
-            // An allowed URL; redirects are not followed, so it cannot lead elsewhere.
-            default => @file_get_contents($value, false, stream_context_create([
-                'http' => ['timeout' => 10, 'follow_location' => 0],
-            ])),
-        };
-
-        if (! is_string($bytes) || $bytes === '' || @getimagesizefromstring($bytes) === false) {
+        if ($bytes === null) {
             return null;
         }
 

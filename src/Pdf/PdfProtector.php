@@ -23,13 +23,7 @@ class PdfProtector
             throw new DriverNotAvailable('PDF passwords need the mpdf/mpdf package, also with Chromium. Run: composer require mpdf/mpdf');
         }
 
-        $tempDir = $this->tempDir ?: sys_get_temp_dir().'/easy-pdf-word';
-
-        if (! is_dir($tempDir)) {
-            @mkdir($tempDir, 0775, true);
-        }
-
-        $mpdf = new Mpdf(['tempDir' => $tempDir, 'margin_top' => 0, 'margin_right' => 0, 'margin_bottom' => 0, 'margin_left' => 0]);
+        $mpdf = new Mpdf(['tempDir' => MpdfDriver::tempDir($this->tempDir), 'margin_top' => 0, 'margin_right' => 0, 'margin_bottom' => 0, 'margin_left' => 0]);
         $pages = $mpdf->setSourceFile(StreamReader::createByString($pdf));
 
         for ($page = 1; $page <= $pages; $page++) {
