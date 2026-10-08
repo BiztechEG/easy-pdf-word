@@ -1,0 +1,45 @@
+<?php
+
+return [
+    'title' => 'قسيمة راتب',
+    'period' => 'عن شهر :month',
+    'number' => 'رقم القسيمة',
+    'employee' => [
+        'name' => 'اسم الموظف',
+        'code' => 'الرقم الوظيفي',
+        'job_title' => 'المسمى الوظيفي',
+        'department' => 'القسم',
+        'national_id' => 'الرقم القومي',
+        'hire_date' => 'تاريخ التعيين',
+        'bank_account' => 'الحساب البنكي',
+    ],
+    'earnings' => 'الاستحقاقات',
+    'deductions' => 'الاستقطاعات',
+    'amount' => 'المبلغ',
+    'total_earnings' => 'إجمالي الاستحقاقات',
+    'total_deductions' => 'إجمالي الاستقطاعات',
+    'net' => 'صافي الراتب',
+    'attendance' => [
+        'working_days' => 'أيام العمل',
+        'present_days' => 'أيام الحضور',
+        'absent_days' => 'أيام الغياب',
+        'leave_days' => 'أيام الإجازة',
+        'overtime_hours' => 'ساعات إضافية',
+    ],
+    'payment_method' => 'طريقة الصرف',
+    'payment_date' => 'تاريخ الصرف',
+    'methods' => [
+        'bank' => 'تحويل بنكي',
+        'cash' => 'نقداً',
+        'cheque' => 'شيك',
+    ],
+    'notes' => 'ملاحظات',
+    'signatures' => [
+        'accountant' => 'المحاسب',
+        'hr' => 'شؤون العاملين',
+        'employee' => 'توقيع الموظف بالاستلام',
+    ],
+    'confidential' => 'سري',
+    'page' => 'صفحة',
+    'of' => 'من',
+];

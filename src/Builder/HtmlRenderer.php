@@ -43,12 +43,25 @@ class HtmlRenderer
             'color' => $block['level'] === 1 ? $doc->theme('primary') : null,
         ];
 
-        return '<div style="'.$this->css($style, $doc).' margin: 0 0 3mm 0;">'.e($block['text']).'</div>';
+        // A heading stays on the same page as the text after it.
+        return '<div style="'.$this->css($style, $doc).' margin: 0 0 3mm 0; page-break-after: avoid;">'.e($block['text']).'</div>';
     }
 
     private function paragraph(array $block, DocContext $doc): string
     {
-        return '<p style="'.$this->css($block['style'], $doc).'">'.$this->runs($block['runs'], $doc).'</p>';
+        $style = $block['style'];
+        $css = $this->css($style, $doc);
+
+        // The same spacing as in the Word file.
+        if (isset($style['space_after'])) {
+            $css .= ' margin-bottom: '.(float) $style['space_after'].'mm;';
+        }
+
+        if (isset($style['line_height'])) {
+            $css .= ' line-height: '.(float) $style['line_height'].';';
+        }
+
+        return '<p style="'.trim($css).'">'.$this->runs($block['runs'], $doc).'</p>';
     }
 
     private function runs(array $runs, DocContext $doc): string

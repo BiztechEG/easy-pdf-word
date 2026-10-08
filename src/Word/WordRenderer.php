@@ -132,7 +132,8 @@ class WordRenderer
             'color' => $block['level'] === 1 ? $this->doc->theme('primary') : null,
         ];
 
-        $this->paragraph($container, [['text' => $block['text']]], $style + ['space_after' => 4]);
+        // A heading stays on the same page as the text after it.
+        $this->paragraph($container, [['text' => $block['text']]], $style + ['space_after' => 4, 'keep_next' => true]);
     }
 
     private function paragraph(AbstractContainer $container, array $runs, array $style): void
@@ -325,6 +326,10 @@ class WordRenderer
 
         if (isset($style['line_height'])) {
             $paragraph['lineHeight'] = (float) $style['line_height'];
+        }
+
+        if (! empty($style['keep_next'])) {
+            $paragraph['keepNext'] = true;
         }
 
         return $paragraph;
