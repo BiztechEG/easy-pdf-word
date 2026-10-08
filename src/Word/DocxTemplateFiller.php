@@ -1,0 +1,241 @@
+<?php
+
+namespace BiztechEG\EasyPdfWord\Word;
+
+use BiztechEG\EasyPdfWord\Arabic\Numerals;
+use BiztechEG\EasyPdfWord\Exceptions\DriverNotAvailable;
+use BiztechEG\EasyPdfWord\Support\DocContext;
+use BiztechEG\EasyPdfWord\Support\Qr;
+use DateTimeInterface;
+use PhpOffice\PhpWord\Settings;
+use PhpOffice\PhpWord\TemplateProcessor;
+use Stringable;
+
+/**
+ * Fills a Word file designed in Word itself (word.docx in a template folder).
+ *
+ * Placeholders use dots for nested data:
+ *
+ *   ${invoice.number}  ${buyer.name}  ${totals.total}
+ *
+ * A list of rows fills a table: put ${items.description}, ${items.quantity}
+ * ... in one table row and the row is repeated for every item. ${items.row_number}
+ * is the row number.
+ *
+ * Images: ${logo}, ${theme.logo} or any placeholder whose value is an image
+ * file or data URI; the size can be given in the placeholder,
+ * ${logo:40:20} (width:height in pixels).
+ *
+ * Also available: ${doc.hijri_date} (from a "date" value), ${doc.qr} (a QR
+ * image of the "qr" value), ${doc.today}, ${theme.*}
+ * (company name, address ...) and every label in lang/{locale}.php as ${t.key}.
+ */
+class DocxTemplateFiller
+{
+    /** @var string[] temporary files, removed after each fill */
+    private array $temporary = [];
+
+    /** Arabic script letters, without the Arabic digits and separators (U+0660 to U+066C). */
+    private const ARABIC_LETTERS = '/[\x{0600}-\x{065F}\x{066D}-\x{06FF}\x{0750}-\x{077F}\x{08A0}-\x{08FF}\x{FB50}-\x{FDFF}\x{FE70}-\x{FEFF}]/u';
+
+    /** Decimals for amounts: those of the document's currency (KWD 3, EGP 2). */
+    private int $decimals = 2;
+
+    public function fill(string $path, array $data, DocContext $doc): string
+    {
+        if (! class_exists(TemplateProcessor::class)) {
+            throw DriverNotAvailable::missingPackage('word', 'phpoffice/phpword');
+        }
+
+        $escaping = Settings::isOutputEscapingEnabled();
+        Settings::setOutputEscapingEnabled(true);
+
+        try {
+            // The document's currency: top level, or in a group such as invoice, quote or document.
+            $currency = $data['currency'] ?? collect($data)->first(fn ($value) => is_array($value) && is_string($value['currency'] ?? null))['currency'] ?? null;
+            $this->decimals = $doc->decimals(is_string($currency) ? $currency : null);
+            $values = $this->flatten($data + ['theme' => $doc->theme, 't' => $doc->translations()]);
+            $values += $this->extras($data, $doc);
+            $processor = new TemplateProcessor($path);
+            // PhpWord's working copy of the template, left behind if anything below throws.
+            $this->temporary[] = $processor->getTempDocumentFilename();
+            $variables = $processor->getVariables();
+
+            $this->fillRows($processor, $data, $variables, $doc);
+
+            foreach (array_unique($processor->getVariables()) as $variable) {
+                $name = explode(':', $variable)[0];
+                $value = $values[$name] ?? null;
+                // Read through $doc->image(), so the allowed folders and hosts apply.
+                $source = $this->isImage($value) ? $doc->image($value) : null;
+
+                if ($source !== null && ($image = $this->imageFile($source))) {
+                    $processor->setImageValue($name, $this->imageOptions($variable, $image));
+
+                    continue;
+                }
+
+                // An image Word cannot show (SVG), may not read or cannot find leaves
+                // the placeholder empty rather than printing a data URI or a path.
+                $processor->setValue($variable, $this->isImage($value) || (is_string($value) && str_starts_with($value, 'data:')) ? '' : $this->text($value, $doc));
+            }
+
+            $file = $this->temporary[] = tempnam(sys_get_temp_dir(), 'easy-docx');
+            $processor->saveAs($file);
+            $content = (string) file_get_contents($file);
+
+            return $content;
+        } finally {
+            Settings::setOutputEscapingEnabled($escaping);
+            $this->cleanup();
+        }
+    }
+
+    /**
+     * Repeat a table row for each item of a list, e.g. ${items.description}.
+     */
+    private function fillRows(TemplateProcessor $processor, array $data, array $variables, DocContext $doc): void
+    {
+        foreach ($data as $key => $list) {
+            if (! is_array($list) || $list === [] || ! self::isList($list) || ! is_array(reset($list))) {
+                continue;
+            }
+
+            $list = array_values($list);
+
+            $first = collect($variables)->first(fn ($v) => str_starts_with($v, $key.'.'));
+
+            if ($first === null) {
+                continue;
+            }
+
+            $rows = [];
+
+            foreach ($list as $i => $item) {
+                $row = [$key.'.row_number' => $this->text($i + 1, $doc)];
+
+                foreach ($this->flatten((array) $item, $key.'.') as $name => $value) {
+                    $row[$name] = $this->text($value, $doc);
+                }
+
+                foreach ($variables as $variable) {
+                    if (str_starts_with($variable, $key.'.')) {
+                        $row[$variable] ??= '';
+                    }
+                }
+
+                $rows[] = $row;
+            }
+
+            try {
+                $processor->cloneRowAndSetValues($first, $rows);
+            } catch (\Throwable) {
+                // The placeholder is not in a table row; fill it like any other value.
+            }
+        }
+    }
+
+    private function extras(array $data, DocContext $doc): array
+    {
+        $date = $data['date'] ?? $data['invoice']['date'] ?? null;
+
+        return array_filter([
+            'doc.hijri_date' => $date && $doc->hasHijri() ? $doc->hijri($date) : null,
+            'doc.today' => now()->format('Y/m/d'),
+            'doc.qr' => ! empty($data['qr']) && is_string($data['qr']) ? Qr::dataUri($data['qr']) : null,
+        ], fn ($value) => $value !== null);
+    }
+
+    /** @return array<string, mixed> */
+    private function flatten(array $data, string $prefix = ''): array
+    {
+        $flat = [];
+
+        foreach ($data as $key => $value) {
+            if (is_array($value) && ! self::isList($value)) {
+                $flat += $this->flatten($value, $prefix.$key.'.');
+            } elseif (is_array($value)) {
+                if ($value === [] || ! is_array(reset($value))) {
+                    $flat[$prefix.$key] = implode('، ', array_map('strval', $value));
+                }
+            } else {
+                $flat[$prefix.$key] = $value;
+            }
+        }
+
+        return $flat;
+    }
+
+    /** A list of rows, also when filtering left gaps in its keys (0, 2, 5). */
+    private static function isList(array $value): bool
+    {
+        return array_is_list($value) || array_filter(array_keys($value), 'is_string') === [];
+    }
+
+    private function text(mixed $value, DocContext $doc): string
+    {
+        $text = match (true) {
+            $value === null => '',
+            is_bool($value) => $value ? '✓' : '',
+            is_float($value) => $doc->numberText($value, $this->decimals),
+            $value instanceof DateTimeInterface => $value->format('Y/m/d'),
+            is_scalar($value), $value instanceof Stringable => (string) $value,
+            default => '',
+        };
+
+        $text = $doc->numerals === Numerals::ARABIC ? Numerals::toArabic($text, separators: false) : $text;
+
+        // In a right-to-left paragraph Word reverses the parts of a phone number, a date or a
+        // code ("+20 100 000 0000", "2026-10-08"): keep a value without Arabic letters in its own order.
+        if ($doc->isRtl() && preg_match('/^[\d\x{0660}-\x{0669}]*$/u', $text) !== 1 && preg_match(self::ARABIC_LETTERS, $text) !== 1) {
+            $text = "\u{202D}{$text}\u{202C}";
+        }
+
+        // A value must not add placeholders that later values would fill:
+        // a word joiner (invisible) keeps "${name}" in the text as written.
+        return str_replace('${', "\$\u{2060}{", $text);
+    }
+
+    /** A data URI or a value that names an image file; whether it may be read is up to $doc->image(). */
+    private function isImage(mixed $value): bool
+    {
+        return is_string($value)
+            && (str_starts_with($value, 'data:image/') || preg_match('/\.(png|jpe?g|gif|bmp|webp|svg)$/i', $value) === 1);
+    }
+
+    /** A local copy of an allowed image, for PhpWord. Null when Word cannot show it. */
+    private function imageFile(string $source): ?string
+    {
+        $bytes = WordImage::load($source);
+
+        if ($bytes === null) {
+            return null;
+        }
+
+        $file = $this->temporary[] = tempnam(sys_get_temp_dir(), 'easy-img');
+        file_put_contents($file, $bytes);
+
+        return $file;
+    }
+
+    private function imageOptions(string $variable, string $file): array
+    {
+        $parts = explode(':', $variable);
+
+        return array_filter([
+            'path' => $file,
+            'width' => $parts[1] ?? 120,
+            'height' => $parts[2] ?? '',
+            'ratio' => true,
+        ], fn ($value) => $value !== '');
+    }
+
+    private function cleanup(): void
+    {
+        foreach ($this->temporary as $file) {
+            @unlink($file);
+        }
+
+        $this->temporary = [];
+    }
+}
