@@ -383,7 +383,7 @@ class WordRenderer
             return "\u{202D}".$text."\u{202C}";
         }
 
-        return preg_replace('/(?<![\p{L}\p{N}])- ?[\d٠-٩][\d٠-٩.,٫٬]*/u', "\u{202D}\$0\u{202C}", $text) ?? $text;
+        return preg_replace('/(?<![\p{L}\p{N}])(?<![\p{N}] )- ?[\d٠-٩][\d٠-٩.,٫٬]*/u', "\u{202D}\$0\u{202C}", $text) ?? $text;
     }
 
     /** ar-EG for an "ar_EG" document, ar-SA for plain "ar". */

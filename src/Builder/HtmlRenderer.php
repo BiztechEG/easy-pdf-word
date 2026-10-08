@@ -181,7 +181,7 @@ class HtmlRenderer
         $html = nl2br(e($text));
 
         return $doc->isRtl()
-            ? preg_replace('/(?<![\p{L}\p{N}])- ?[\d٠-٩][\d٠-٩.,٫٬]*/u', '<bdo dir="ltr">$0</bdo>', $html) ?? $html
+            ? preg_replace('/(?<![\p{L}\p{N}])(?<![\p{N}] )- ?[\d٠-٩][\d٠-٩.,٫٬]*/u', '<bdo dir="ltr">$0</bdo>', $html) ?? $html
             : $html;
     }
 
