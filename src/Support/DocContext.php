@@ -206,7 +206,9 @@ class DocContext
         }
 
         if (str_starts_with($source, 'data:')) {
-            return str_starts_with($source, 'data:image/') ? $source : null;
+            $svg = stripos($source, 'data:image/svg') === 0;
+
+            return str_starts_with($source, 'data:image/') && (! $svg || self::isSafeSvg(self::dataUriContent($source))) ? $source : null;
         }
 
         if (preg_match('#^https?://#i', $source)) {
@@ -224,7 +226,32 @@ class DocContext
             return null;
         }
 
-        return 'data:'.$mime.';base64,'.base64_encode(file_get_contents($path));
+        $content = (string) file_get_contents($path);
+
+        if ($mime === 'image/svg+xml' && ! self::isSafeSvg($content)) {
+            return null;
+        }
+
+        return 'data:'.$mime.';base64,'.base64_encode($content);
+    }
+
+    /**
+     * mPDF reads the files and URLs an SVG points to (<image href>, url(),
+     * entities), outside the allowed folders and hosts. So an SVG is used
+     * only when it refers to nothing but its own parts (href="#id").
+     */
+    private static function isSafeSvg(string $svg): bool
+    {
+        return mb_check_encoding($svg, 'UTF-8')
+            && ! preg_match('/<!DOCTYPE|<!ENTITY|<\?xml-stylesheet|<(image|script|foreignObject|feImage)\b|@import|\b(href|src)\s*=\s*(?!["\']?\s*#)|url\(\s*(?!["\']?\s*#)/i', $svg);
+    }
+
+    /** The decoded content of a data URI, plain or base64. */
+    private static function dataUriContent(string $uri): string
+    {
+        [$meta, $data] = explode(',', $uri, 2) + [1 => ''];
+
+        return str_ends_with(strtolower($meta), ';base64') ? (string) base64_decode($data) : rawurldecode($data);
     }
 
     private function allowsRemote(string $url): bool
