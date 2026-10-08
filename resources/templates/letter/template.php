@@ -30,6 +30,7 @@ return [
         'signature' => ['nullable', 'string'],
         'stamp' => ['nullable', 'string'],
         'cc' => ['nullable', 'array'],
+        'cc.*' => ['string'],
     ],
 
     'defaults' => [

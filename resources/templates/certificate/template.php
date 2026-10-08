@@ -30,7 +30,7 @@ return [
         'details' => ['nullable', 'string'],
         'from' => ['nullable', 'date'],
         'to' => ['nullable', 'date', 'after_or_equal:from'],
-        'hours' => ['nullable', 'numeric', 'min:0'],
+        'hours' => ['nullable', 'numeric', 'gt:0'],
         'grade' => ['nullable', 'string'],
         'issuer' => ['nullable', 'string'],
         'signatures' => ['nullable', 'array', 'max:3'],
