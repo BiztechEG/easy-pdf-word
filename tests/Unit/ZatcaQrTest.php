@@ -29,4 +29,11 @@ class ZatcaQrTest extends TestCase
         $this->assertSame('15.00', $fields[5]);
         $this->assertStringStartsWith('data:image/png;base64,', $qr->toDataUri());
     }
+
+    public function test_fields_longer_than_255_bytes_are_rejected(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        ZatcaQr::make(str_repeat('ش', 130), '300000000000003', '2026-10-08', 100, 15)->toTlv();
+    }
 }
