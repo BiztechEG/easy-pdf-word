@@ -13,6 +13,8 @@ class PdfOptions
     /**
      * @param  string|array{0: float, 1: float}  $paper  a name like "A4" or [width, height] in mm
      * @param  array{0: float, 1: float, 2: float, 3: float}  $margins  mm: top, right, bottom, left
+     * @param  array{text: string, opacity: float, color: string}|null  $watermark  text across every page
+     * @param  array{user: string, owner: ?string, allow: list<string>}|null  $protection  passwords and what readers may do
      */
     public function __construct(
         public string|array $paper = 'A4',
@@ -26,6 +28,8 @@ class PdfOptions
         public ?string $title = null,
         public ?string $author = null,
         public string $numerals = 'latin',
+        public ?array $watermark = null,
+        public ?array $protection = null,
     ) {}
 
     public function isLandscape(): bool
