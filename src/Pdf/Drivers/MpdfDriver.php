@@ -76,7 +76,19 @@ class MpdfDriver implements PdfDriver
             self::protect($mpdf, $options->protection);
         }
 
-        $mpdf->WriteHTML($html);
+        // mPDF refuses HTML longer than pcre.backtrack_limit (1,000,000
+        // bytes by default): a long report, or a large logo inlined as data.
+        $limit = ini_get('pcre.backtrack_limit');
+
+        if ((int) $limit < strlen($html) * 2) {
+            ini_set('pcre.backtrack_limit', (string) (strlen($html) * 2));
+        }
+
+        try {
+            $mpdf->WriteHTML($html);
+        } finally {
+            ini_set('pcre.backtrack_limit', $limit);
+        }
 
         return $mpdf->Output('', Destination::STRING_RETURN);
     }
