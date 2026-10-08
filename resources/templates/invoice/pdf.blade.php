@@ -111,7 +111,7 @@
                 <table class="totals">
                     <tr><td>{{ $doc->t('subtotal') }}</td><td class="num">{{ $doc->number($totals['subtotal'], $decimals) }}</td></tr>
                     @if ($totals['discount'] > 0)
-                        <tr><td>{{ $doc->t('discount') }}</td><td class="num">- {{ $doc->number($totals['discount'], $decimals) }}</td></tr>
+                        <tr><td>{{ $doc->t('discount') }}</td><td class="num">{{ $doc->number(-$totals['discount'], $decimals) }}</td></tr>
                     @endif
                     <tr><td>{{ $doc->t('vat', ['rate' => $doc->rate($invoice['tax_rate'])]) }}</td><td class="num">{{ $doc->number($totals['tax'], $decimals) }}</td></tr>
                     <tr class="grand"><td>{{ $doc->t('total') }}</td><td class="num">{{ $doc->number($totals['total'], $decimals) }} {{ $currencyLabel }}</td></tr>
