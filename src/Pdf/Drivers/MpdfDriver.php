@@ -125,6 +125,13 @@ class MpdfDriver implements PdfDriver
     {
         [$fontDirs, $fontdata] = $this->fonts->forMpdf((int) ($this->config['use_kashida'] ?? 75));
         [$top, $right, $bottom, $left] = $options->margins;
+
+        // A right-to-left mPDF document mirrors its left and right margins, so the
+        // page's right margin is given as the left one.
+        if ($options->direction === 'rtl') {
+            [$right, $left] = [$left, $right];
+        }
+
         $arabicFont = $this->fonts->supportsArabic($options->font) ? strtolower($options->font) : 'cairo';
 
         $tempDir = self::tempDir($this->config['temp_dir'] ?? null);
