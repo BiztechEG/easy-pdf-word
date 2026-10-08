@@ -59,7 +59,10 @@ class WordRenderer
         $this->numerals = $doc->numerals;
 
         $previousRtl = Settings::isDefaultRtl();
+        $previousEscaping = Settings::isOutputEscapingEnabled();
         Settings::setDefaultRtl($this->rtl);
+        Settings::setOutputEscapingEnabled(true);
+        $file = null;
 
         try {
             $word = $this->word = new PhpWord;
@@ -93,12 +96,15 @@ class WordRenderer
 
             $file = tempnam(sys_get_temp_dir(), 'easy-docx');
             IOFactory::createWriter($word, 'Word2007')->save($file);
-            $content = (string) file_get_contents($file);
-            @unlink($file);
 
-            return $content;
+            return (string) file_get_contents($file);
         } finally {
             Settings::setDefaultRtl($previousRtl);
+            Settings::setOutputEscapingEnabled($previousEscaping);
+
+            if ($file !== null) {
+                @unlink($file);
+            }
         }
     }
 
