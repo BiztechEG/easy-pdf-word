@@ -1,6 +1,7 @@
 <?php
 
 use BiztechEG\EasyPdfWord\Support\Currency;
+use Illuminate\Validation\ValidationException;
 
 /*
 | Egyptian e-invoice (منظومة الفاتورة الإلكترونية - ETA): the printed copy
@@ -96,6 +97,11 @@ return [
         foreach ($data['lines'] as $i => $line) {
             $lineSales = round((float) $line['quantity'] * (float) $line['unit_price'], 5);
             $lineDiscount = (float) ($line['discount'] ?? 0);
+
+            if ($lineDiscount > $lineSales) {
+                throw ValidationException::withMessages(["lines.{$i}.discount" => 'The discount cannot be more than the line amount (quantity × unit price).']);
+            }
+
             $lineNet = $lineSales - $lineDiscount;
             $byType = [];
 
