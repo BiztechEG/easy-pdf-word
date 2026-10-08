@@ -37,6 +37,14 @@ class PdfManager extends Manager
         return parent::extend(strtolower($driver), $callback);
     }
 
+    /** Whether an engine of this name is built in or was added with extend(). */
+    public function has(string $driver): bool
+    {
+        $driver = $this->normalize($driver);
+
+        return isset($this->customCreators[$driver]) || method_exists($this, 'create'.Str::studly($driver).'Driver');
+    }
+
     public function normalize(?string $driver): string
     {
         $driver = strtolower($driver ?? $this->getDefaultDriver());
@@ -60,6 +68,11 @@ class PdfManager extends Manager
         $name = $this->normalize($driver);
         $fallback = $this->config->get('easy-pdf-word.pdf.fallback');
         $fallback = $fallback ? $this->normalize($fallback) : null;
+
+        // A misspelt name is a mistake in the app, not an engine that failed.
+        if (! $this->has($name)) {
+            throw new \InvalidArgumentException("Unknown PDF engine [{$name}]. Use mpdf, chromium, gotenberg or a name added with Doc::extend().");
+        }
 
         try {
             $engine = $this->driver($name);
