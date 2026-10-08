@@ -130,9 +130,8 @@ class DocContext
             return Arabic::tafqeet($amount, $currency, $only);
         }
 
-        $value = round((float) Numerals::toLatin(str_replace(',', '', (string) $amount)), 2);
-        $cents = (int) round(abs($value - (int) $value) * 100);
-        $text = Tafqeet::words((int) $value).' '.strtoupper($currency).($cents > 0 ? ' و'.$cents.'/100' : '');
+        [$integer, $fraction, $per] = $this->split($amount, $currency);
+        $text = Tafqeet::words($integer).' '.strtoupper($currency).($fraction > 0 ? ' و'.$fraction.'/'.$per : '');
 
         return $only ? 'فقط '.$text.' لا غير' : $text;
     }
@@ -154,12 +153,31 @@ class DocContext
             return '';
         }
 
-        $value = round((float) $amount, 2);
-        $integer = (int) $value;
-        $cents = (int) round(abs($value - $integer) * 100);
+        [$integer, $fraction, $per] = $this->split($amount, $currency);
         $words = (new \NumberFormatter($language, \NumberFormatter::SPELLOUT))->format($integer);
 
-        return trim($words.' '.strtoupper($currency).($cents > 0 ? ' and '.$cents.'/100' : '').($only ? ' only' : ''));
+        return trim($words.' '.strtoupper($currency).($fraction > 0 ? ' and '.$fraction.'/'.$per : '').($only ? ' only' : ''));
+    }
+
+    /** Decimal places of the currency's amounts: 3 for KWD, 2 for most. */
+    public function decimals(?string $currency): int
+    {
+        return Currency::decimals($currency);
+    }
+
+    /**
+     * An amount as whole units and minor units, e.g. [1, 125, 1000] for
+     * 1.125 KWD.
+     *
+     * @return array{0: int, 1: int, 2: int}
+     */
+    private function split(int|float|string $amount, string $currency): array
+    {
+        $decimals = Currency::decimals($currency);
+        $value = round((float) str_replace([',', '٬', '٫'], ['', '', '.'], Numerals::toLatin((string) $amount)), $decimals);
+        $per = 10 ** $decimals;
+
+        return [(int) $value, (int) round(abs($value - (int) $value) * $per), $per];
     }
 
     /** A currency's short label from the template's "currencies" labels, or its code. */

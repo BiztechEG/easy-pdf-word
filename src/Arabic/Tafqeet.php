@@ -98,6 +98,14 @@ class Tafqeet
         return array_keys(self::$currencies);
     }
 
+    /** Decimal places of a known currency (3 for KWD), or null. */
+    public static function decimals(string $currency): ?int
+    {
+        $definition = self::$currencies[strtoupper($currency)] ?? null;
+
+        return $definition ? (int) round(log10($definition['subunits'])) : null;
+    }
+
     /**
      * The number in Arabic words. Decimals are read after "فاصلة", with
      * leading zeros spoken: 1.05 is "واحد فاصلة صفر خمسة".
