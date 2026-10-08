@@ -62,7 +62,8 @@ class DocxTemplateFiller
                     continue;
                 }
 
-                $processor->setValue($variable, $this->text($value, $doc));
+                // An image that cannot be used leaves the placeholder empty rather than printing the data URI.
+                $processor->setValue($variable, is_string($value) && str_starts_with($value, 'data:') ? '' : $this->text($value, $doc));
             }
 
             $file = $this->temporary[] = tempnam(sys_get_temp_dir(), 'easy-docx');
@@ -167,28 +168,36 @@ class DocxTemplateFiller
         return str_replace('${', "\$\u{2060}{", $text);
     }
 
+    /** A data URI or a value that names an image file; whether it may be read is up to $doc->image(). */
     private function isImage(mixed $value): bool
     {
-        if (! is_string($value) || $value === '') {
-            return false;
-        }
-
-        return str_starts_with($value, 'data:image/')
-            || (preg_match('/\.(png|jpe?g|gif|bmp)$/i', $value) === 1 && is_file($value));
+        return is_string($value)
+            && (str_starts_with($value, 'data:image/') || preg_match('/\.(png|jpe?g|gif|bmp)$/i', $value) === 1);
     }
 
-    /** A local copy of the image, read through $doc->image() so the allowed folders apply. */
+    /**
+     * A local copy of the image, read through $doc->image() so the allowed
+     * folders and hosts apply. Null when the image cannot be used.
+     */
     private function imageFile(string $value, DocContext $doc): ?string
     {
-        $value = str_starts_with($value, 'data:') ? $value : $doc->image($value);
+        $value = $doc->image($value);
 
-        if ($value === null) {
+        $bytes = match (true) {
+            $value === null => null,
+            str_starts_with($value, 'data:') => base64_decode(substr($value, strpos($value, ',') + 1), true),
+            // An allowed URL; redirects are not followed, so it cannot lead elsewhere.
+            default => @file_get_contents($value, false, stream_context_create([
+                'http' => ['timeout' => 10, 'follow_location' => 0],
+            ])),
+        };
+
+        if (! is_string($bytes) || $bytes === '' || @getimagesizefromstring($bytes) === false) {
             return null;
         }
 
-        $file = tempnam(sys_get_temp_dir(), 'easy-img');
-        file_put_contents($file, base64_decode(substr($value, strpos($value, ',') + 1)));
-        $this->temporary[] = $file;
+        $file = $this->temporary[] = tempnam(sys_get_temp_dir(), 'easy-img');
+        file_put_contents($file, $bytes);
 
         return $file;
     }
