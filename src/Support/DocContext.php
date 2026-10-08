@@ -253,7 +253,13 @@ class DocContext
         }
 
         if (preg_match('#^https?://#i', $source)) {
-            return $this->allowsRemote($source) ? $source : null;
+            if (! $this->allowsRemote($source)) {
+                return null;
+            }
+
+            // mPDF and Word files fetch the URL without following redirects. A browser
+            // engine would follow them past the allowed hosts, so it gets the image here.
+            return $this->usesCssFonts() ? $this->fetchImage($source) : $source;
         }
 
         // Other schemes (phar://, ftp://, php://) and network shares are never read.
@@ -274,6 +280,26 @@ class DocContext
         }
 
         return 'data:'.$mime.';base64,'.base64_encode($content);
+    }
+
+    /** An allowed image URL as a data URI: no redirects, 10 seconds, 10 MB at most. */
+    private function fetchImage(string $url): ?string
+    {
+        $content = @file_get_contents($url, false, stream_context_create([
+            'http' => ['timeout' => 10, 'follow_location' => 0, 'max_redirects' => 0],
+        ]), 0, 10 * 1024 * 1024);
+
+        if (! is_string($content) || $content === '') {
+            return null;
+        }
+
+        $mime = (@getimagesizefromstring($content) ?: [])['mime'] ?? null;
+
+        if ($mime === null && str_contains(substr($content, 0, 1024), '<svg') && self::isSafeSvg($content)) {
+            $mime = 'image/svg+xml';
+        }
+
+        return $mime !== null && str_starts_with($mime, 'image/') ? 'data:'.$mime.';base64,'.base64_encode($content) : null;
     }
 
     /**
