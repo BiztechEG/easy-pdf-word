@@ -131,6 +131,18 @@ class TafqeetTest extends TestCase
         $this->assertSame('فقط خمسة وعشرون ألف جنيه وخمسون قرشاً لا غير', Tafqeet::amount(25000.5, 'EGP', true));
     }
 
+    public function test_numbers_with_too_many_decimals_throw(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        Tafqeet::words('0.1234567890123456');
+    }
+
+    public function test_long_decimals_are_rounded_in_amounts(): void
+    {
+        $this->assertSame('جنيه واحد وثلاثة عشر قرشاً', Tafqeet::amount('1.1250000000000000001', 'EGP'));
+    }
+
     public function test_invalid_and_too_large_numbers_throw(): void
     {
         foreach (['abc', '1000000000000000', 1e15] as $value) {

@@ -108,6 +108,10 @@ class Tafqeet
 
         $text = self::integerWords($integer, $gender);
 
+        if (strlen($fraction) > strlen((string) self::MAX)) {
+            throw new InvalidArgumentException("[{$number}] has too many decimals to read in words.");
+        }
+
         if ($fraction !== '') {
             $digits = ltrim($fraction, '0');
             $zeros = array_fill(0, strlen($fraction) - strlen($digits), 'صفر');
