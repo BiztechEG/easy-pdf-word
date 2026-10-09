@@ -83,7 +83,8 @@ class Template
         return $this->manifest['theme'] ?? [];
     }
 
-    public function paper(): ?string
+    /** @return string|array{0: float, 1: float}|null a name like "A4" or [width, height] in mm */
+    public function paper(): string|array|null
     {
         return $this->manifest['paper'] ?? null;
     }

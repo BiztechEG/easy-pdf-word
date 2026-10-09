@@ -134,11 +134,14 @@ return function (DocumentBuilder $word, array $data, DocContext $doc): void {
         }
     }
 
-    if ($doc->isRtl()) {
+    // In Arabic, or in another language when PHP's intl extension can spell it out.
+    $words = $doc->inWords($totals['total'], $currency);
+
+    if ($words !== '') {
         $word->spacer(3);
         $word->table([[[
             'lines' => [[
-                'text' => $doc->t('amount_in_words').': '.$doc->tafqeet($totals['total'], $currency),
+                'text' => $doc->t('amount_in_words').': '.$words,
             ]],
             'border' => $primary,
         ]]], ['borders' => false, 'font_size' => 10]);

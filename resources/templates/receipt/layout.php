@@ -1,6 +1,7 @@
 <?php
 
 use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
+use BiztechEG\EasyPdfWord\Support\Color;
 use BiztechEG\EasyPdfWord\Support\DocContext;
 use Illuminate\Support\Carbon;
 
@@ -39,7 +40,7 @@ return function (DocumentBuilder $voucher, array $data, DocContext $doc): void {
         '',
         [
             'text' => $doc->t('amount').': '.$doc->numberText($data['amount'], $doc->decimals($data['currency'])).' '.$doc->currency($data['currency']),
-            'bold' => true, 'size' => 14, 'align' => 'center', 'border' => $primary, 'background' => '#F0FDFA',
+            'bold' => true, 'size' => 14, 'align' => 'center', 'border' => $primary, 'background' => Color::tint($primary, 0.93),
         ],
         '',
     ]], ['columns' => [30, 40, 30], 'borders' => false]);

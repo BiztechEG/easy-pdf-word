@@ -35,6 +35,9 @@ class DocxTemplateFiller
     /** @var string[] temporary files, removed after each fill */
     private array $temporary = [];
 
+    /** Arabic script letters, without the Arabic digits and separators (U+0660 to U+066C). */
+    private const ARABIC_LETTERS = '/[\x{0600}-\x{065F}\x{066D}-\x{06FF}\x{0750}-\x{077F}\x{08A0}-\x{08FF}\x{FB50}-\x{FDFF}\x{FE70}-\x{FEFF}]/u';
+
     /** Decimals for amounts: those of the document's currency (KWD 3, EGP 2). */
     private int $decimals = 2;
 
@@ -48,7 +51,8 @@ class DocxTemplateFiller
         Settings::setOutputEscapingEnabled(true);
 
         try {
-            $currency = $data['currency'] ?? $data['invoice']['currency'] ?? $data['document']['currency'] ?? null;
+            // The document's currency: top level, or in a group such as invoice, quote or document.
+            $currency = $data['currency'] ?? collect($data)->first(fn ($value) => is_array($value) && is_string($value['currency'] ?? null))['currency'] ?? null;
             $this->decimals = $doc->decimals(is_string($currency) ? $currency : null);
             $values = $this->flatten($data + ['theme' => $doc->theme, 't' => $doc->translations()]);
             $values += $this->extras($data, $doc);
@@ -71,9 +75,9 @@ class DocxTemplateFiller
                     continue;
                 }
 
-                // An image Word cannot show (SVG) or may not read leaves the
-                // placeholder empty rather than printing a data URI or a path.
-                $processor->setValue($variable, $source !== null || (is_string($value) && str_starts_with($value, 'data:')) ? '' : $this->text($value, $doc));
+                // An image Word cannot show (SVG), may not read or cannot find leaves
+                // the placeholder empty rather than printing a data URI or a path.
+                $processor->setValue($variable, $this->isImage($value) || (is_string($value) && str_starts_with($value, 'data:')) ? '' : $this->text($value, $doc));
             }
 
             $file = $this->temporary[] = tempnam(sys_get_temp_dir(), 'easy-docx');
@@ -180,6 +184,12 @@ class DocxTemplateFiller
         };
 
         $text = $doc->numerals === Numerals::ARABIC ? Numerals::toArabic($text, separators: false) : $text;
+
+        // In a right-to-left paragraph Word reverses the parts of a phone number, a date or a
+        // code ("+20 100 000 0000", "2026-10-08"): keep a value without Arabic letters in its own order.
+        if ($doc->isRtl() && preg_match('/^[\d\x{0660}-\x{0669}]*$/u', $text) !== 1 && preg_match(self::ARABIC_LETTERS, $text) !== 1) {
+            $text = "\u{202D}{$text}\u{202C}";
+        }
 
         // A value must not add placeholders that later values would fill:
         // a word joiner (invisible) keeps "${name}" in the text as written.

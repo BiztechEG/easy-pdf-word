@@ -47,6 +47,10 @@ return function (DocumentBuilder $invoice, array $data, DocContext $doc): void {
         $invoice->paragraph([$label('uuid'), $code($document['uuid']) + ['size' => 9]], ['size' => 9]);
     }
 
+    if (! empty($document['submission_uuid'])) {
+        $invoice->paragraph([$label('submission_uuid'), $code($document['submission_uuid']) + ['size' => 9]], ['size' => 9]);
+    }
+
     $invoice->spacer(2);
 
     // Issuer and receiver.
