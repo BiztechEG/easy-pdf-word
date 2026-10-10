@@ -19,6 +19,7 @@ class CoreBoundaryTest extends TestCase
         'Contracts',
         'Exceptions',
         'Fonts',
+        'Output',
         'Support',
         'Validation',
         'Word',
