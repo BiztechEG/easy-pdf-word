@@ -1,0 +1,79 @@
+{
+    "name": "biztecheg/easy-pdf-word",
+    "description": "Generate PDF and Word documents in plain PHP, in any language, with first-class Arabic support (RTL, shaping, numerals, tafqeet, Hijri dates) and ready-made templates. No framework needed.",
+    "keywords": [
+        "pdf",
+        "word",
+        "docx",
+        "arabic",
+        "rtl",
+        "mpdf",
+        "invoice",
+        "templates",
+        "zatca",
+        "tafqeet",
+        "hijri"
+    ],
+    "homepage": "https://easypdf.biztech-eg.com",
+    "license": "MIT",
+    "type": "library",
+    "authors": [
+        {
+            "name": "BizTech",
+            "homepage": "https://github.com/BiztechEG"
+        }
+    ],
+    "support": {
+        "docs": "https://easypdf.biztech-eg.com",
+        "issues": "https://github.com/BiztechEG/easy-pdf-word/issues",
+        "source": "https://github.com/BiztechEG/easy-pdf-word",
+        "security": "https://github.com/BiztechEG/easy-pdf-word/security/policy"
+    },
+    "require": {
+        "php": "^8.2",
+        "ext-mbstring": "*",
+        "ext-gd": "*",
+        "chillerlan/php-qrcode": "^5.0"
+    },
+    "require-dev": {
+        "mpdf/mpdf": "^8.2",
+        "nesbot/carbon": "^3.0",
+        "phpoffice/phpword": "^1.4",
+        "phpunit/phpunit": "^10.5|^11.0|^12.0"
+    },
+    "suggest": {
+        "mpdf/mpdf": "Default PDF engine: pure PHP, native Arabic shaping and bidi (GPL-2.0).",
+        "spatie/browsershot": "Chromium PDF engine via Puppeteer, highest rendering quality.",
+        "phpoffice/phpword": "Word (.docx) output: Arabic right-to-left documents and Word-designed templates.",
+        "ext-curl": "Gotenberg engine (the Chromium engine as a service).",
+        "ext-intl": "Required for Hijri dates and locale-aware number formatting.",
+        "ext-zip": "Required for Word files and ZIP archives.",
+        "biztecheg/laravel-easy-pdf-word": "The Laravel package on top of this one: the Doc facade, config, Blade, storage, mail, queues and a preview page."
+    },
+    "conflict": {
+        "mpdf/mpdf": "<8.2",
+        "phpoffice/phpword": "<1.4",
+        "spatie/browsershot": "<5.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "BiztechEG\\EasyPdfWord\\": "src/"
+        },
+        "files": [
+            "src/helpers.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "BiztechEG\\EasyPdfWord\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
