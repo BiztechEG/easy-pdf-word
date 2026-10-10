@@ -1,8 +1,8 @@
 <?php
 
+use BiztechEG\EasyPdfWord\Exceptions\ValidationFailed;
 use BiztechEG\EasyPdfWord\Support\Currency;
 use BiztechEG\EasyPdfWord\Zatca\ZatcaQr;
-use Illuminate\Validation\ValidationException;
 
 /*
 | Credit or debit note (إشعار دائن / إشعار مدين) against an issued invoice:
@@ -65,7 +65,7 @@ return [
             $itemDiscount = round((float) ($item['discount'] ?? 0), $decimals);
 
             if ($itemDiscount > $gross) {
-                throw ValidationException::withMessages(["items.{$i}.discount" => 'The discount cannot be more than the line amount (quantity × unit price).']);
+                throw ValidationFailed::withMessages(["items.{$i}.discount" => 'The discount cannot be more than the line amount (quantity × unit price).']);
             }
 
             $data['items'][$i]['total'] = round($gross - $itemDiscount, $decimals);
