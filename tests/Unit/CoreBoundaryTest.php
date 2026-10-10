@@ -7,40 +7,11 @@ use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 
 /**
- * The code that will become the framework-free PHP core must not use
- * Laravel: no Illuminate classes and no Laravel helper functions.
+ * This package works without Laravel: no Illuminate classes and no Laravel
+ * helper functions in src/ or in the bundled templates.
  */
 class CoreBoundaryTest extends TestCase
 {
-    /** Folders and files of the future core, relative to src/. */
-    private const CORE = [
-        'Arabic',
-        'Builder',
-        'Contracts',
-        'Exceptions',
-        'Fonts',
-        'Output',
-        'Support',
-        'Templates',
-        'Validation',
-        'View',
-        'Word',
-        'Zatca',
-        'Document.php',
-        'DocumentFactory.php',
-        'DocumentServices.php',
-        'EasyPdfWord.php',
-        'Pdf/Drivers/ArabicLanguageToFont.php',
-        'Pdf/Drivers/BrowsershotDriver.php',
-        'Pdf/Drivers/GotenbergDriver.php',
-        'Pdf/Drivers/MpdfDriver.php',
-        'Pdf/PdfManager.php',
-        'Pdf/PdfOptions.php',
-        'Pdf/PdfProtector.php',
-        'Pdf/Watermark.php',
-        'helpers.php',
-    ];
-
     /** Bridges that name Laravel only to fit in when it is installed. */
     private const ALLOWED = [
         'Support/HtmlString.php',
@@ -122,18 +93,9 @@ class CoreBoundaryTest extends TestCase
         $src = dirname(__DIR__, 2).'/src';
         $files = [];
 
-        foreach (self::CORE as $entry) {
-            $path = $src.'/'.$entry;
-            $this->assertFileExists($path, "src/{$entry} is listed as core but does not exist.");
-
-            $paths = is_dir($path)
-                ? array_map('strval', iterator_to_array(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path, RecursiveDirectoryIterator::SKIP_DOTS))))
-                : [$path];
-
-            foreach ($paths as $file) {
-                if (str_ends_with($file, '.php')) {
-                    $files[substr($file, strlen($src) + 1)] = $file;
-                }
+        foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($src, RecursiveDirectoryIterator::SKIP_DOTS)) as $file) {
+            if (str_ends_with((string) $file, '.php')) {
+                $files[substr((string) $file, strlen($src) + 1)] = (string) $file;
             }
         }
 
