@@ -1,8 +1,8 @@
 <?php
 
 use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
+use BiztechEG\EasyPdfWord\Support\Dates;
 use BiztechEG\EasyPdfWord\Support\DocContext;
-use Illuminate\Support\Carbon;
 
 /*
 | One layout for the PDF and the Word file.
@@ -20,7 +20,7 @@ return function (DocumentBuilder $cn, array $data, DocContext $doc): void {
     $totals = $data['totals'];
     $currency = $doc->currency($note['currency']);
     $decimals = $doc->decimals($note['currency']);
-    $date = fn ($value) => Carbon::parse($value)->format('Y/m/d');
+    $date = fn ($value) => Dates::parse($value)->format('Y/m/d');
     $logo = $doc->theme('logo');
 
     // Seller, title and note details.

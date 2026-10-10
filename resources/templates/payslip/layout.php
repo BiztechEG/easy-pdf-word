@@ -1,8 +1,8 @@
 <?php
 
 use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
+use BiztechEG\EasyPdfWord\Support\Dates;
 use BiztechEG\EasyPdfWord\Support\DocContext;
-use Illuminate\Support\Carbon;
 
 /*
 | One layout for the PDF and the Word file.
@@ -17,8 +17,8 @@ return function (DocumentBuilder $slip, array $data, DocContext $doc): void {
     $totals = $data['totals'];
     $currency = $doc->currency($data['currency']);
     $decimals = $doc->decimals($data['currency']);
-    $date = fn ($value) => Carbon::parse($value)->format('Y/m/d');
-    $month = Carbon::createFromFormat('!Y-m', $data['period'])->locale($doc->locale)->translatedFormat('F Y');
+    $date = fn ($value) => Dates::parse($value)->format('Y/m/d');
+    $month = $doc->monthName($data['period'].'-01').' '.substr($data['period'], 0, 4);
     $logo = $doc->theme('logo');
 
     // Company, title and month.

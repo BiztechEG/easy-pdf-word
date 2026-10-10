@@ -1,8 +1,8 @@
 <?php
 
 use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
+use BiztechEG\EasyPdfWord\Support\Dates;
 use BiztechEG\EasyPdfWord\Support\DocContext;
-use Illuminate\Support\Carbon;
 
 /*
 | The Word version of the letter, built from the same data as pdf.blade.php.
@@ -13,7 +13,7 @@ return function (DocumentBuilder $word, array $data, DocContext $doc): void {
     $primary = $doc->theme('primary', '#0F766E');
     $muted = $doc->theme('muted', '#6B7280');
     $logo = $doc->theme('logo');
-    $date = Carbon::parse($data['date']);
+    $date = Dates::parse($data['date']);
 
     // Letterhead.
     $word->table([[
