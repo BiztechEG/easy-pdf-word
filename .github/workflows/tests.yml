@@ -1,0 +1,52 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3', '8.4', '8.5']
+        dependencies: ['highest']
+        include:
+          - php: '8.2'
+            dependencies: 'lowest'
+
+    name: PHP ${{ matrix.php }}${{ matrix.dependencies == 'lowest' && ' / lowest' || '' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, gd, intl, zip, curl
+          coverage: none
+
+      - name: Validate composer.json
+        run: composer validate --strict --no-check-lock
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress ${{ matrix.dependencies == 'lowest' && '--prefer-lowest --prefer-stable' || '' }}
+
+      # The engines are dev dependencies here but run in every app, so they
+      # are audited too.
+      - name: Check dependencies for security advisories
+        if: matrix.dependencies != 'lowest'
+        run: composer audit
+
+      # Nothing from Laravel may be installed: the package must work without it.
+      - name: Check that Laravel is not installed
+        run: "! composer show --name-only | grep -E '^(laravel|illuminate)/'"
+
+      - name: Run tests
+        run: vendor/bin/phpunit
