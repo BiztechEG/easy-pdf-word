@@ -537,6 +537,7 @@ class Document
             fallbackTranslations: $this->template?->translations('en') ?? [],
             imagePaths: $this->config('images.paths'),
             remoteImages: $this->remoteImages(),
+            timezone: $this->services->timezone(),
         );
     }
 

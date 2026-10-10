@@ -1,5 +1,7 @@
 <?php
 
+use BiztechEG\EasyPdfWord\Support\Data;
+use BiztechEG\EasyPdfWord\Support\Dates;
 use BiztechEG\EasyPdfWord\Support\DocContext;
 
 /*
@@ -52,7 +54,8 @@ return [
         foreach ($data['rows'] ?? [] as $row) {
             $rows[] = match (true) {
                 is_array($row) => $row,
-                $row instanceof \Illuminate\Contracts\Support\Arrayable => $row->toArray(),
+                // Laravel models and collections, or any object with toArray().
+                is_object($row) && method_exists($row, 'toArray') => (array) $row->toArray(),
                 default => (array) $row,
             };
         }
@@ -61,13 +64,13 @@ return [
 
         foreach ((array) $data['sum'] as $key) {
             // Read like the cells are: "1,240" is 1240, not 1.
-            $totals[$key] = array_sum(array_map(fn ($row) => is_scalar($value = data_get($row, $key)) ? DocContext::toFloat($value) : 0.0, $rows));
+            $totals[$key] = array_sum(array_map(fn ($row) => is_scalar($value = Data::get($row, $key)) ? DocContext::toFloat($value) : 0.0, $rows));
         }
 
         $data['columns'] = $columns;
         $data['rows'] = $rows;
         $data['totals'] = $totals;
-        $data['generated_at'] ??= now();
+        $data['generated_at'] ??= Dates::now();
 
         return $data;
     },

@@ -24,6 +24,7 @@ class DocContext
         private readonly array $fallbackTranslations = [],
         private readonly ?array $imagePaths = null,
         private readonly bool|array $remoteImages = false,
+        private readonly ?string $timezone = null,
     ) {}
 
     public function isRtl(): bool
@@ -70,6 +71,16 @@ class DocContext
     }
 
     /**
+     * Escape a value for HTML in plain PHP views, as {{ }} does in Blade:
+     * <?= $doc->e($invoice['number']) ?>. HTML from ltr(), number() and the
+     * like is printed as it is.
+     */
+    public function e(mixed $value): string
+    {
+        return Html::escape($value);
+    }
+
+    /**
      * Keep a left-to-right value (phone, tax number, code, e-mail) in its
      * own order inside Arabic text, e.g. "+20 100 000 0000" or "123-456-789".
      */
@@ -93,6 +104,24 @@ class DocContext
             is_scalar($value), $value instanceof \Stringable => (string) $value,
             default => (string) json_encode($value, JSON_UNESCAPED_UNICODE),
         };
+    }
+
+    /** The time zone dates are shown in: the app's in Laravel, PHP's default otherwise. */
+    public function timezone(): \DateTimeZone
+    {
+        return new \DateTimeZone($this->timezone ?? date_default_timezone_get());
+    }
+
+    /** The month's name in the document's language: "سبتمبر" or "September". */
+    public function monthName(\DateTimeInterface|string|int $date): string
+    {
+        return Dates::monthName(Dates::parse($date), $this->locale);
+    }
+
+    /** The weekday's name in the document's language: "الخميس" or "Thursday". */
+    public function dayName(\DateTimeInterface|string|int $date): string
+    {
+        return Dates::dayName(Dates::parse($date), $this->locale);
     }
 
     /** Format a number with thousands separators. Digits follow the document's numerals setting. */

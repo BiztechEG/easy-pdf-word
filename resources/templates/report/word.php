@@ -1,8 +1,9 @@
 <?php
 
 use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
+use BiztechEG\EasyPdfWord\Support\Data;
+use BiztechEG\EasyPdfWord\Support\Dates;
 use BiztechEG\EasyPdfWord\Support\DocContext;
-use Illuminate\Support\Carbon;
 
 /*
 | The Word version of the report, built from the same data as pdf.blade.php.
@@ -19,7 +20,7 @@ return function (DocumentBuilder $word, array $data, DocContext $doc): void {
 
     $format = fn (array $column, mixed $value) => match ($column['format']) {
         'number', 'money' => $value === null || $value === '' ? '' : $doc->numberText($value, $column['decimals']),
-        'date' => $value ? Carbon::parse($value)->format('Y/m/d') : '',
+        'date' => $value ? Dates::parse($value)->format('Y/m/d') : '',
         default => $doc->text($value),
     };
 
@@ -30,7 +31,7 @@ return function (DocumentBuilder $word, array $data, DocContext $doc): void {
         ])],
         ['lines' => [
             ['text' => $company['name'] ?? '', 'color' => $muted],
-            ['text' => $doc->t('generated_at').': '.Carbon::parse($data['generated_at'])->format('Y/m/d H:i'), 'color' => $muted, 'size' => 9],
+            ['text' => $doc->t('generated_at').': '.Dates::parse($data['generated_at'])->format('Y/m/d H:i'), 'color' => $muted, 'size' => 9],
         ], 'align' => 'end'],
     ]], ['columns' => [65, 35], 'borders' => false]);
 
@@ -64,7 +65,7 @@ return function (DocumentBuilder $word, array $data, DocContext $doc): void {
         $cells = [(string) ($i + 1)];
 
         foreach ($columns as $column) {
-            $cells[] = $format($column, data_get($row, $column['key']));
+            $cells[] = $format($column, Data::get($row, $column['key']));
         }
 
         $rows[] = $cells;

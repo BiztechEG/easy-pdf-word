@@ -1,8 +1,8 @@
 <?php
 
 use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
+use BiztechEG\EasyPdfWord\Support\Dates;
 use BiztechEG\EasyPdfWord\Support\DocContext;
-use Illuminate\Support\Carbon;
 
 /*
 | One layout for the PDF and the Word file.
@@ -27,7 +27,7 @@ return function (DocumentBuilder $invoice, array $data, DocContext $doc): void {
         ['text' => $doc->t('types.'.$document['type']), 'bold' => true, 'size' => 17, 'color' => $primary],
         [$doc->t('internal_id').': ', ['text' => (string) $document['internal_id'], 'ltr' => true]],
         // ETA's dateTimeIssued is UTC ("...Z"); printed in the app's time zone.
-        $doc->t('issued_at').': '.Carbon::parse($document['issued_at'])->setTimezone(config('app.timezone'))->format('Y/m/d H:i'),
+        $doc->t('issued_at').': '.Dates::parse($document['issued_at'])->setTimezone($doc->timezone())->format('Y/m/d H:i'),
     ];
 
     if (! empty($document['purchase_order'])) {

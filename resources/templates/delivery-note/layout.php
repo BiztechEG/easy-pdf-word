@@ -1,8 +1,8 @@
 <?php
 
 use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
+use BiztechEG\EasyPdfWord\Support\Dates;
 use BiztechEG\EasyPdfWord\Support\DocContext;
-use Illuminate\Support\Carbon;
 
 /*
 | One layout for the PDF and the Word file.
@@ -17,7 +17,7 @@ return function (DocumentBuilder $note, array $data, DocContext $doc): void {
     $customer = $data['customer'];
     $shipTo = (array) ($data['ship_to'] ?? []);
     $transport = array_filter((array) ($data['transport'] ?? []));
-    $date = fn ($value) => Carbon::parse($value)->format('Y/m/d');
+    $date = fn ($value) => Dates::parse($value)->format('Y/m/d');
     $quantity = fn ($value) => $doc->numberText($value, floor((float) $value) == (float) $value ? 0 : 2);
     $logo = $doc->theme('logo');
 
@@ -70,7 +70,7 @@ return function (DocumentBuilder $note, array $data, DocContext $doc): void {
 
     // Items. Code, ordered, remaining and notes appear only when used.
     $items = $data['items'];
-    $has = fn (string $key) => collect($items)->contains(fn ($item) => isset($item[$key]) && $item[$key] !== '' && $item[$key] !== null);
+    $has = fn (string $key) => array_filter($items, fn ($item) => isset($item[$key]) && $item[$key] !== '' && $item[$key] !== null) !== [];
     $end = fn (string $text) => ['text' => $text, 'align' => 'end'];
     $number = ['width' => 11, 'align' => 'end'];
 

@@ -1,8 +1,8 @@
 <?php
 
 use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
+use BiztechEG\EasyPdfWord\Support\Dates;
 use BiztechEG\EasyPdfWord\Support\DocContext;
-use Illuminate\Support\Carbon;
 
 /*
 | One layout for the PDF and the Word file.
@@ -14,7 +14,7 @@ return function (DocumentBuilder $contract, array $data, DocContext $doc): void 
     $border = $doc->theme('border', '#E5E7EB');
     $info = $data['contract'];
     $parties = $data['parties'];
-    $date = Carbon::parse($info['date']);
+    $date = Dates::parse($info['date']);
     $logo = $doc->theme('logo');
 
     // "الأول", "الثاني" ... or the number past the listed ordinals.
@@ -39,7 +39,7 @@ return function (DocumentBuilder $contract, array $data, DocContext $doc): void 
 
     $contract->line($primary);
     $contract->paragraph($doc->t(empty($info['place']) ? 'intro' : 'intro_place', [
-        'day' => $date->locale($doc->locale)->translatedFormat('l'),
+        'day' => $doc->dayName($date),
         'date' => $date->format('Y/m/d'),
         'place' => $info['place'] ?? '',
     ]), $paragraph + ['bold' => true]);

@@ -1,8 +1,8 @@
 <?php
 
 use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
+use BiztechEG\EasyPdfWord\Support\Dates;
 use BiztechEG\EasyPdfWord\Support\DocContext;
-use Illuminate\Support\Carbon;
 
 /*
 | The Word version of the certificate, built from the same data as
@@ -14,7 +14,7 @@ return function (DocumentBuilder $word, array $data, DocContext $doc): void {
     $muted = $doc->theme('muted', '#6B7280');
     $logo = $doc->theme('logo');
     $type = $data['type'];
-    $format = fn ($value) => Carbon::parse($value)->format('Y/m/d');
+    $format = fn ($value) => Dates::parse($value)->format('Y/m/d');
     $center = fn (array $style = []) => $style + ['align' => 'center', 'space_after' => 2];
 
     $word->spacer(6);

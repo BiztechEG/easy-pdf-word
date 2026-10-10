@@ -79,4 +79,21 @@ class CoreSupportTest extends TestCase
         $this->assertSame('2026-10-08T07:00:00Z', ZatcaQr::make('S', '3', $riyadh, 1, 1)->timestamp);
         $this->assertSame('2026-10-08T00:00:00Z', ZatcaQr::make('S', '3', '2026-10-08', 1, 1)->timestamp);
     }
+
+    public function test_month_and_day_names_match_carbon(): void
+    {
+        foreach (['ar', 'ar_EG', 'ar_SA', 'en', 'en_GB', 'fr', 'tr'] as $locale) {
+            if (! in_array($locale, ['ar', 'ar_EG', 'ar_SA', 'en', 'en_GB'], true) && ! extension_loaded('intl')) {
+                continue;
+            }
+
+            for ($day = 0; $day < 366; $day += 9) {
+                $carbon = CarbonImmutable::create(2026, 1, 1)->addDays($day)->locale($locale);
+                $date = new DateTimeImmutable($carbon->format('Y-m-d'));
+
+                $this->assertSame($carbon->translatedFormat('F'), Dates::monthName($date, $locale), "{$locale} {$carbon->format('Y-m-d')}");
+                $this->assertSame($carbon->translatedFormat('l'), Dates::dayName($date, $locale), "{$locale} {$carbon->format('Y-m-d')}");
+            }
+        }
+    }
 }
