@@ -2,11 +2,11 @@
 
 namespace BiztechEG\EasyPdfWord\Pdf\Drivers;
 
+use BiztechEG\EasyPdfWord\Contracts\HttpClient;
 use BiztechEG\EasyPdfWord\Contracts\PdfDriver;
 use BiztechEG\EasyPdfWord\Fonts\FontRegistry;
 use BiztechEG\EasyPdfWord\Pdf\PdfOptions;
 use BiztechEG\EasyPdfWord\Pdf\Watermark;
-use Illuminate\Http\Client\Factory as Http;
 use RuntimeException;
 
 /**
@@ -19,7 +19,7 @@ class GotenbergDriver implements PdfDriver
     private const MM_PER_INCH = 25.4;
 
     public function __construct(
-        private Http $http,
+        private HttpClient $http,
         private array $config = [],
         private ?FontRegistry $fonts = null,
     ) {}
@@ -39,17 +39,15 @@ class GotenbergDriver implements PdfDriver
         [$top, $right, $bottom, $left] = $options->margins;
         [$width, $height] = $options->paperSize();
 
-        $request = $this->http
-            ->timeout((int) ($this->config['timeout'] ?? 60))
-            ->attach('files', $this->withoutScripts(Watermark::inject($html, $options)), 'index.html');
+        $files = [['name' => 'files', 'contents' => $this->withoutScripts(Watermark::inject($html, $options)), 'filename' => 'index.html']];
 
         foreach (['header' => $options->header, 'footer' => $options->footer] as $name => $part) {
             if ($part) {
-                $request->attach('files', $this->chromeTemplate($part, $options), "{$name}.html");
+                $files[] = ['name' => 'files', 'contents' => $this->chromeTemplate($part, $options), 'filename' => "{$name}.html"];
             }
         }
 
-        $response = $request->post(rtrim($this->config['url'], '/').'/forms/chromium/convert/html', [
+        $response = $this->http->postMultipart(rtrim($this->config['url'], '/').'/forms/chromium/convert/html', [
             'paperWidth' => $this->inches($width),
             'paperHeight' => $this->inches($height),
             'marginTop' => $this->inches($top),
@@ -57,18 +55,18 @@ class GotenbergDriver implements PdfDriver
             'marginBottom' => $this->inches($bottom),
             'marginLeft' => $this->inches($left),
             'printBackground' => 'true',
-        ]);
+        ], $files, (int) ($this->config['timeout'] ?? 60));
 
         if (! $response->successful()) {
-            throw new RuntimeException("Gotenberg returned HTTP {$response->status()}: ".substr($response->body(), 0, 300));
+            throw new RuntimeException("Gotenberg returned HTTP {$response->status}: ".substr($response->body, 0, 300));
         }
 
         // A proxy or a wrong URL can answer 200 with a web page.
-        if (! str_starts_with($response->body(), '%PDF-')) {
-            throw new RuntimeException('Gotenberg did not return a PDF; check DOC_GOTENBERG_URL. It returned: '.substr(strip_tags($response->body()), 0, 200));
+        if (! str_starts_with($response->body, '%PDF-')) {
+            throw new RuntimeException('Gotenberg did not return a PDF; check DOC_GOTENBERG_URL. It returned: '.substr(strip_tags($response->body), 0, 200));
         }
 
-        return $response->body();
+        return $response->body;
     }
 
     /**

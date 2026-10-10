@@ -2,39 +2,78 @@
 
 namespace BiztechEG\EasyPdfWord\Pdf;
 
+use BiztechEG\EasyPdfWord\Contracts\HttpClient;
 use BiztechEG\EasyPdfWord\Contracts\PdfDriver;
 use BiztechEG\EasyPdfWord\Exceptions\DriverNotAvailable;
 use BiztechEG\EasyPdfWord\Fonts\FontRegistry;
 use BiztechEG\EasyPdfWord\Pdf\Drivers\BrowsershotDriver;
 use BiztechEG\EasyPdfWord\Pdf\Drivers\GotenbergDriver;
 use BiztechEG\EasyPdfWord\Pdf\Drivers\MpdfDriver;
+use BiztechEG\EasyPdfWord\Support\CurlHttpClient;
+use BiztechEG\EasyPdfWord\Support\Data;
 use Closure;
-use Illuminate\Http\Client\Factory as Http;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Manager;
-use Illuminate\Support\Str;
+use InvalidArgumentException;
 use Throwable;
 
 /**
  * Resolves PDF engines by name ("mpdf", "chromium", "gotenberg", or one
  * added with extend()) and falls back to another engine when the chosen
  * one is missing or fails.
- *
- * @method PdfDriver driver(string|null $driver = null)
  */
-class PdfManager extends Manager
+class PdfManager
 {
     private const ALIASES = ['chromium' => 'browsershot', 'chrome' => 'browsershot'];
 
-    public function getDefaultDriver(): string
-    {
-        return $this->config->get('easy-pdf-word.pdf.driver', 'mpdf');
+    private const BUILT_IN = ['mpdf', 'browsershot', 'gotenberg'];
+
+    /** @var Closure(): array */
+    private Closure $config;
+
+    /** @var Closure(): FontRegistry */
+    private Closure $fonts;
+
+    private HttpClient $http;
+
+    /** @var Closure(string): void */
+    private Closure $warn;
+
+    /** @var array<string, Closure> */
+    private array $customCreators = [];
+
+    /** @var array<string, PdfDriver> */
+    private array $drivers = [];
+
+    /**
+     * @param  array|Closure(): array  $config  the package settings (config/easy-pdf-word.php); a closure is read on every use, so later changes apply
+     * @param  FontRegistry|Closure(): FontRegistry|null  $fonts
+     * @param  Closure(string): void|null  $warn  told when an engine fails and the fallback renders; error_log() by default
+     * @param  mixed  $creatorArgument  what engines added with extend() receive (the app, in Laravel)
+     */
+    public function __construct(
+        array|Closure $config = [],
+        FontRegistry|Closure|null $fonts = null,
+        ?HttpClient $http = null,
+        ?Closure $warn = null,
+        private mixed $creatorArgument = null,
+    ) {
+        $this->config = $config instanceof Closure ? $config : fn () => $config;
+        $fonts ??= new FontRegistry((array) Data::get($this->config(), 'fonts.custom', []));
+        $this->fonts = $fonts instanceof Closure ? $fonts : fn () => $fonts;
+        $this->http = $http ?? new CurlHttpClient;
+        $this->warn = $warn ?? fn (string $message) => error_log($message);
     }
 
-    /** Engine names are matched without case, as driver() lowercases them. */
-    public function extend($driver, Closure $callback)
+    public function getDefaultDriver(): string
     {
-        return parent::extend(strtolower($driver), $callback);
+        return (string) Data::get($this->config(), 'pdf.driver', 'mpdf');
+    }
+
+    /** Add an engine: extend('my-engine', fn ($app) => new MyDriver). Names are matched without case. */
+    public function extend(string $driver, Closure $callback): static
+    {
+        $this->customCreators[strtolower($driver)] = $callback;
+
+        return $this;
     }
 
     /** Whether an engine of this name is built in or was added with extend(). */
@@ -42,7 +81,7 @@ class PdfManager extends Manager
     {
         $driver = $this->normalize($driver);
 
-        return isset($this->customCreators[$driver]) || method_exists($this, 'create'.Str::studly($driver).'Driver');
+        return isset($this->customCreators[$driver]) || in_array($driver, self::BUILT_IN, true);
     }
 
     public function normalize(?string $driver): string
@@ -52,9 +91,26 @@ class PdfManager extends Manager
         return self::ALIASES[$driver] ?? $driver;
     }
 
-    public function driver($driver = null)
+    /** The engine of this name, made once and kept. */
+    public function driver(?string $driver = null): PdfDriver
     {
-        return parent::driver($this->normalize($driver));
+        $driver = $this->normalize($driver);
+
+        return $this->drivers[$driver] ??= $this->create($driver);
+    }
+
+    /** @return array<string, PdfDriver> the engines made so far */
+    public function getDrivers(): array
+    {
+        return $this->drivers;
+    }
+
+    /** Make engines again on next use, e.g. after a config change. */
+    public function forgetDrivers(): static
+    {
+        $this->drivers = [];
+
+        return $this;
     }
 
     /**
@@ -66,7 +122,7 @@ class PdfManager extends Manager
     public function render(string $html, PdfOptions $options, ?string $driver = null, ?callable $htmlFor = null): array
     {
         $name = $this->normalize($driver);
-        $fallback = $this->config->get('easy-pdf-word.pdf.fallback');
+        $fallback = Data::get($this->config(), 'pdf.fallback');
         $fallback = $fallback ? $this->normalize($fallback) : null;
 
         // A misspelt name is a mistake in the app, not an engine that failed.
@@ -121,7 +177,7 @@ class PdfManager extends Manager
         }
 
         // Kept short: Browsershot's message holds the whole command, with the header and footer.
-        Log::warning("easy-pdf-word: [{$name}] failed, falling back to [{$fallback}]: ".Str::limit($e->getMessage(), 300));
+        ($this->warn)("easy-pdf-word: [{$name}] failed, falling back to [{$fallback}]: ".self::limit($e->getMessage(), 300));
 
         return [$this->protect($engine->render($htmlFor ? $htmlFor($engine) : $html, $options), $engine, $options), $fallback];
     }
@@ -138,21 +194,37 @@ class PdfManager extends Manager
 
     public function engineConfig(string $name): array
     {
-        return (array) $this->config->get("easy-pdf-word.pdf.drivers.{$name}", []);
+        return (array) Data::get($this->config(), "pdf.drivers.{$name}", []);
     }
 
-    protected function createMpdfDriver(): PdfDriver
+    private function config(): array
     {
-        return new MpdfDriver($this->container->make(FontRegistry::class), $this->engineConfig('mpdf'));
+        return (array) ($this->config)();
     }
 
-    protected function createBrowsershotDriver(): PdfDriver
+    private function create(string $driver): PdfDriver
     {
-        return new BrowsershotDriver($this->engineConfig('browsershot'), $this->container->make(FontRegistry::class));
+        if (isset($this->customCreators[$driver])) {
+            return $this->customCreators[$driver]($this->creatorArgument);
+        }
+
+        return match ($driver) {
+            'mpdf' => new MpdfDriver(($this->fonts)(), $this->engineConfig('mpdf')),
+            'browsershot' => new BrowsershotDriver($this->engineConfig('browsershot'), ($this->fonts)()),
+            'gotenberg' => new GotenbergDriver($this->http, $this->engineConfig('gotenberg'), ($this->fonts)()),
+            default => throw new InvalidArgumentException("Driver [{$driver}] not supported."),
+        };
     }
 
-    protected function createGotenbergDriver(): PdfDriver
+    /** At most $limit characters wide, then "...". */
+    private static function limit(string $text, int $limit): string
     {
-        return new GotenbergDriver($this->container->make(Http::class), $this->engineConfig('gotenberg'), $this->container->make(FontRegistry::class));
+        return mb_strwidth($text, 'UTF-8') <= $limit ? $text : rtrim(mb_strimwidth($text, 0, $limit, '', 'UTF-8')).'...';
+    }
+
+    /** Other calls go to the default engine, e.g. $manager->isAvailable(). */
+    public function __call(string $method, array $parameters): mixed
+    {
+        return $this->driver()->$method(...$parameters);
     }
 }
