@@ -77,8 +77,8 @@ return function (DocumentBuilder $po, array $data, DocContext $doc): void {
 
     // Items. The code and discount columns appear only when used.
     $items = $data['items'];
-    $hasCode = collect($items)->contains(fn ($item) => ! empty($item['code']));
-    $hasDiscount = collect($items)->contains(fn ($item) => ! empty($item['discount']));
+    $hasCode = array_filter($items, fn ($item) => ! empty($item['code'])) !== [];
+    $hasDiscount = array_filter($items, fn ($item) => ! empty($item['discount'])) !== [];
     $end = fn (string $text) => ['text' => $text, 'align' => 'end'];
 
     $header = ['#'];

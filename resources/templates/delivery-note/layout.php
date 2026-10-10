@@ -70,7 +70,7 @@ return function (DocumentBuilder $note, array $data, DocContext $doc): void {
 
     // Items. Code, ordered, remaining and notes appear only when used.
     $items = $data['items'];
-    $has = fn (string $key) => collect($items)->contains(fn ($item) => isset($item[$key]) && $item[$key] !== '' && $item[$key] !== null);
+    $has = fn (string $key) => array_filter($items, fn ($item) => isset($item[$key]) && $item[$key] !== '' && $item[$key] !== null) !== [];
     $end = fn (string $text) => ['text' => $text, 'align' => 'end'];
     $number = ['width' => 11, 'align' => 'end'];
 

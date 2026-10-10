@@ -62,7 +62,7 @@ return function (DocumentBuilder $cn, array $data, DocContext $doc): void {
     $cn->paragraph([['text' => $doc->t('reason').': ', 'bold' => true], $data['reason']]);
 
     // Items. The discount column appears only when used.
-    $hasDiscount = collect($data['items'])->contains(fn ($item) => ! empty($item['discount']));
+    $hasDiscount = array_filter($data['items'], fn ($item) => ! empty($item['discount'])) !== [];
     $end = fn (string $text) => ['text' => $text, 'align' => 'end'];
 
     $header = ['#', $doc->t('description'), $end($doc->t('quantity')), $end($doc->t('unit_price'))];
