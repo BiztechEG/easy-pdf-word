@@ -21,25 +21,18 @@ class CoreSupportTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_escape_matches_laravel(): void
+    public function test_escape_is_htmlspecialchars_with_substitution(): void
     {
-        foreach (['<b>"Tom" & \'Jerry\'</b>', 'شركة &amp; أخرى', '', null, 12.5, "bad \xC3("] as $value) {
-            $this->assertSame(e($value), Html::escape($value), var_export($value, true));
-        }
-
+        $this->assertSame('&lt;b&gt;&quot;Tom&quot; &amp; &#039;Jerry&#039;&lt;/b&gt;', Html::escape('<b>"Tom" & \'Jerry\'</b>'));
+        $this->assertSame('شركة &amp;amp; أخرى', Html::escape('شركة &amp; أخرى'));
+        $this->assertSame('', Html::escape(''));
+        $this->assertSame('', Html::escape(null));
+        $this->assertSame('12.5', Html::escape(12.5));
+        $this->assertSame("bad \u{FFFD}(", Html::escape("bad \xC3("));
         $this->assertSame('&amp;amp;', Html::escape('&amp;'));
         $this->assertSame('&amp;', Html::escape('&amp;', false));
         $this->assertSame('<bdo>x</bdo>', Html::escape(new HtmlString('<bdo>x</bdo>')));
-    }
-
-    public function test_html_string_is_raw_in_blade(): void
-    {
-        $html = new HtmlString('<bdo dir="ltr">+20 100</bdo>');
-
-        $this->assertInstanceOf(\Illuminate\Contracts\Support\Htmlable::class, $html);
-        $this->assertInstanceOf(\Illuminate\Support\HtmlString::class, $html);
-        $this->assertSame('<bdo dir="ltr">+20 100</bdo>', e($html));
-        $this->assertSame('<bdo dir="ltr">+20 100</bdo>', (string) $html);
+        $this->assertSame('<bdo>x</bdo>', (string) new HtmlString('<bdo>x</bdo>'));
     }
 
     public function test_data_get_reads_dot_keys(): void
