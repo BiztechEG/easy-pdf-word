@@ -20,6 +20,7 @@ class CoreBoundaryTest extends TestCase
         'Exceptions',
         'Fonts',
         'Support',
+        'Validation',
         'Word',
         'Zatca',
         'Pdf/Drivers/ArabicLanguageToFont.php',
