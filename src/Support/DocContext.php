@@ -5,8 +5,6 @@ namespace BiztechEG\EasyPdfWord\Support;
 use BiztechEG\EasyPdfWord\Arabic\Arabic;
 use BiztechEG\EasyPdfWord\Arabic\Numerals;
 use BiztechEG\EasyPdfWord\Arabic\Tafqeet;
-use Illuminate\Support\Arr;
-use Illuminate\Support\HtmlString;
 
 /**
  * Passed to every document view as $doc: direction, fonts, theme and
@@ -47,16 +45,22 @@ class DocContext
 
     public function theme(string $key, mixed $default = null): mixed
     {
-        return Arr::get($this->theme, $key, $default);
+        return Data::get($this->theme, $key, $default);
     }
 
     /** A label from the template's lang/{locale}.php, with :placeholders. */
     public function t(string $key, array $replace = []): string
     {
-        $line = Arr::get($this->translations, $key) ?? Arr::get($this->fallbackTranslations, $key) ?? $key;
+        $line = Data::get($this->translations, $key) ?? Data::get($this->fallbackTranslations, $key) ?? $key;
 
         // strtr() tries the longest name first, so :page does not eat the start of :pages.
-        return strtr($line, collect($replace)->mapWithKeys(fn ($value, $name) => [':'.$name => (string) $value])->all());
+        $pairs = [];
+
+        foreach ($replace as $name => $value) {
+            $pairs[':'.$name] = (string) $value;
+        }
+
+        return strtr($line, $pairs);
     }
 
     /** All labels for the document's language, falling back to English. */
@@ -71,7 +75,7 @@ class DocContext
      */
     public function ltr(int|float|string|null $value): HtmlString
     {
-        return new HtmlString('<bdo dir="ltr">'.e((string) $value).'</bdo>');
+        return new HtmlString('<bdo dir="ltr">'.Html::escape((string) $value).'</bdo>');
     }
 
     /**
@@ -131,7 +135,7 @@ class DocContext
     {
         $amount = $this->number($value, $decimals)->toHtml();
 
-        return new HtmlString($currency ? $amount.' '.e($currency) : $amount);
+        return new HtmlString($currency ? $amount.' '.Html::escape($currency) : $amount);
     }
 
     /**
