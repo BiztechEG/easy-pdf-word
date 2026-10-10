@@ -2,8 +2,8 @@
 
 namespace BiztechEG\EasyPdfWord\Arabic;
 
+use BiztechEG\EasyPdfWord\Support\Dates;
 use DateTimeInterface;
-use Illuminate\Support\Carbon;
 use IntlDateFormatter;
 use RuntimeException;
 
@@ -27,8 +27,8 @@ class Hijri
 
         $date = match (true) {
             $date instanceof DateTimeInterface => $date,
-            $date === null => Carbon::now(),
-            default => Carbon::parse($date),
+            $date === null => Dates::now(),
+            default => Dates::parse($date),
         };
 
         $formatter = new IntlDateFormatter(
