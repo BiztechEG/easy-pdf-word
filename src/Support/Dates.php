@@ -35,9 +35,16 @@ final class Dates
     /**
      * A date from a DateTime, a date string ("2026-10-08", "2026/10/08 14:30")
      * or a Unix timestamp, in the default time zone unless $timezone is given.
+     * Null and "" are now, as with Carbon::parse().
      */
-    public static function parse(DateTimeInterface|string|int $date, ?string $timezone = null): DateTimeImmutable
+    public static function parse(DateTimeInterface|string|int|null $date, ?string $timezone = null): DateTimeImmutable
     {
+        if ($date === null || $date === '') {
+            $now = self::now();
+
+            return $timezone === null ? $now : $now->setTimezone(new DateTimeZone($timezone));
+        }
+
         if ($date instanceof DateTimeInterface) {
             return DateTimeImmutable::createFromInterface($date);
         }
