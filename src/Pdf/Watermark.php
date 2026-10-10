@@ -3,6 +3,7 @@
 namespace BiztechEG\EasyPdfWord\Pdf;
 
 use BiztechEG\EasyPdfWord\Support\Color;
+use BiztechEG\EasyPdfWord\Support\Html;
 
 /**
  * The watermark for Chromium engines: a fixed element, which Chromium prints
@@ -35,8 +36,8 @@ class Watermark
         return '<div aria-hidden="true" style="position: fixed; top: 0; right: 0; bottom: 0; left: 0; display: flex; '
             .'align-items: center; justify-content: center; pointer-events: none; z-index: 2147483647;">'
             .'<div dir="'.$options->direction.'" style="transform: rotate(-45deg); white-space: nowrap; font-weight: bold; '
-            .'font-family: \''.e($options->font).'\', sans-serif; font-size: '.$size.'pt; color: '.Color::css($color, '#000000')
+            .'font-family: \''.Html::escape($options->font).'\', sans-serif; font-size: '.$size.'pt; color: '.Color::css($color, '#000000')
             .'; opacity: '.(float) $opacity.';">'
-            .e($text).'</div></div>';
+            .Html::escape($text).'</div></div>';
     }
 }
