@@ -7,7 +7,6 @@ use BiztechEG\EasyPdfWord\Exceptions\DriverNotAvailable;
 use BiztechEG\EasyPdfWord\Fonts\FontRegistry;
 use BiztechEG\EasyPdfWord\Pdf\PdfOptions;
 use BiztechEG\EasyPdfWord\Pdf\Watermark;
-use Illuminate\Filesystem\Filesystem;
 use Spatie\Browsershot\Browsershot;
 
 /**
@@ -91,7 +90,7 @@ class BrowsershotDriver implements PdfDriver
         try {
             return $browsershot->pdf();
         } finally {
-            (new Filesystem)->deleteDirectory($tempPath);
+            self::removeDirectory($tempPath);
         }
     }
 
@@ -114,5 +113,19 @@ class BrowsershotDriver implements PdfDriver
         return $fonts.'<div dir="'.$options->direction.'" style="width:100%;font-size:9px;padding:0 '
             .$options->margins[1].'mm 0 '.$options->margins[3].'mm;font-family:\''.$options->font.'\',sans-serif;">'
             .$html.'</div>';
+    }
+
+    /** Remove a folder and everything in it; links are removed, not followed. */
+    private static function removeDirectory(string $path): void
+    {
+        if (! is_dir($path) || is_link($path)) {
+            return;
+        }
+
+        foreach (new \FilesystemIterator($path) as $item) {
+            $item->isDir() && ! $item->isLink() ? self::removeDirectory($item->getPathname()) : @unlink($item->getPathname());
+        }
+
+        @rmdir($path);
     }
 }
