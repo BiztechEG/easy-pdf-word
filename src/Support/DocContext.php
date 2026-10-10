@@ -70,6 +70,16 @@ class DocContext
     }
 
     /**
+     * Escape a value for HTML in plain PHP views, as {{ }} does in Blade:
+     * <?= $doc->e($invoice['number']) ?>. HTML from ltr(), number() and the
+     * like is printed as it is.
+     */
+    public function e(mixed $value): string
+    {
+        return Html::escape($value);
+    }
+
+    /**
      * Keep a left-to-right value (phone, tax number, code, e-mail) in its
      * own order inside Arabic text, e.g. "+20 100 000 0000" or "123-456-789".
      */
