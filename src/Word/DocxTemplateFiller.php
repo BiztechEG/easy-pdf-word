@@ -4,6 +4,7 @@ namespace BiztechEG\EasyPdfWord\Word;
 
 use BiztechEG\EasyPdfWord\Arabic\Numerals;
 use BiztechEG\EasyPdfWord\Exceptions\DriverNotAvailable;
+use BiztechEG\EasyPdfWord\Support\Dates;
 use BiztechEG\EasyPdfWord\Support\DocContext;
 use BiztechEG\EasyPdfWord\Support\Qr;
 use DateTimeInterface;
@@ -52,7 +53,7 @@ class DocxTemplateFiller
 
         try {
             // The document's currency: top level, or in a group such as invoice, quote or document.
-            $currency = $data['currency'] ?? collect($data)->first(fn ($value) => is_array($value) && is_string($value['currency'] ?? null))['currency'] ?? null;
+            $currency = $data['currency'] ?? self::first($data, fn ($value) => is_array($value) && is_string($value['currency'] ?? null))['currency'] ?? null;
             $this->decimals = $doc->decimals(is_string($currency) ? $currency : null);
             $values = $this->flatten($data + ['theme' => $doc->theme, 't' => $doc->translations()]);
             $values += $this->extras($data, $doc);
@@ -103,7 +104,7 @@ class DocxTemplateFiller
 
             $list = array_values($list);
 
-            $first = collect($variables)->first(fn ($v) => str_starts_with($v, $key.'.'));
+            $first = self::first($variables, fn ($v) => str_starts_with($v, $key.'.'));
 
             if ($first === null) {
                 continue;
@@ -141,7 +142,7 @@ class DocxTemplateFiller
 
         return array_filter([
             'doc.hijri_date' => $date && $doc->hasHijri() ? $doc->hijri($date) : null,
-            'doc.today' => now()->format('Y/m/d'),
+            'doc.today' => Dates::now()->format('Y/m/d'),
             'doc.qr' => ! empty($data['qr']) && is_string($data['qr']) ? Qr::dataUri($data['qr']) : null,
         ], fn ($value) => $value !== null);
     }
@@ -237,5 +238,17 @@ class DocxTemplateFiller
         }
 
         $this->temporary = [];
+    }
+
+    /** The first value that passes the check, or null. */
+    private static function first(array $values, callable $check): mixed
+    {
+        foreach ($values as $value) {
+            if ($check($value)) {
+                return $value;
+            }
+        }
+
+        return null;
     }
 }
