@@ -24,6 +24,7 @@ class DocContext
         private readonly array $fallbackTranslations = [],
         private readonly ?array $imagePaths = null,
         private readonly bool|array $remoteImages = false,
+        private readonly ?string $timezone = null,
     ) {}
 
     public function isRtl(): bool
@@ -103,6 +104,12 @@ class DocContext
             is_scalar($value), $value instanceof \Stringable => (string) $value,
             default => (string) json_encode($value, JSON_UNESCAPED_UNICODE),
         };
+    }
+
+    /** The time zone dates are shown in: the app's in Laravel, PHP's default otherwise. */
+    public function timezone(): \DateTimeZone
+    {
+        return new \DateTimeZone($this->timezone ?? date_default_timezone_get());
     }
 
     /** The month's name in the document's language: "سبتمبر" or "September". */

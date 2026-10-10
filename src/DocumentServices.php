@@ -19,6 +19,7 @@ final class DocumentServices
     /**
      * @param  array|Closure(): array  $config  a closure is read on every use, so config changed at runtime applies
      * @param  (Closure(): ?string)|null  $appLocale  the locale when neither the document nor "locale" sets one
+     * @param  (Closure(): ?string)|null  $appTimezone  the time zone dates are shown in; PHP's default when null
      */
     public function __construct(
         public readonly PdfManager $pdf,
@@ -27,6 +28,7 @@ final class DocumentServices
         public readonly Validator $validator,
         private readonly array|Closure $config = [],
         private readonly ?Closure $appLocale = null,
+        private readonly ?Closure $appTimezone = null,
     ) {}
 
     /** A setting by "dot.notation" key: config('pdf.paper'). */
@@ -38,5 +40,10 @@ final class DocumentServices
     public function appLocale(): string
     {
         return ($this->appLocale === null ? null : ($this->appLocale)()) ?? 'en';
+    }
+
+    public function timezone(): string
+    {
+        return ($this->appTimezone === null ? null : ($this->appTimezone)()) ?: date_default_timezone_get();
     }
 }
