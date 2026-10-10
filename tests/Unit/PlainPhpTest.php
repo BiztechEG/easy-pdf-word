@@ -110,6 +110,19 @@ class PlainPhpTest extends TestCase
         }
     }
 
+    public function test_the_new_template_starter_works_without_laravel(): void
+    {
+        $docs = self::docs(['templates' => ['paths' => [__DIR__.'/../../resources/stubs']]]);
+        $document = $docs->template('template', ['title' => 'قائمة <التعبئة>'])->locale('ar');
+
+        $html = $document->toHtml();
+        $this->assertStringContainsString('<h1>قائمة &lt;التعبئة&gt;</h1>', $html);
+        $this->assertStringContainsString('<title>قائمة &lt;التعبئة&gt;</title>', $html);
+        $this->assertStringContainsString('{page} / {pages}', $document->options()->footer);
+        $this->assertStringStartsWith('%PDF', $document->pdf()->content());
+        $this->assertStringStartsWith('PK', $document->word()->content());
+    }
+
     public function test_zips_files(): void
     {
         $docs = self::docs();
