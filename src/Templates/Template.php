@@ -9,11 +9,12 @@ use RuntimeException;
  * A template folder:
  *
  *   template.php      name, description, fields (validation rules), defaults
- *   pdf.blade.php     the PDF layout
+ *   pdf.html.php      the PDF layout as a plain PHP view (or pdf.blade.php, Laravel only)
  *   layout.php        optional code layout for both formats: returns fn (DocumentBuilder $doc, array $data, DocContext $context)
  *   word.php          optional Word layout, same shape; wins over layout.php for Word
  *   word.docx         optional Word file with ${placeholders}, designed in Word (wins over word.php)
- *   footer.blade.php  optional page footer, may use {page} and {pages}
+ *   footer.html.php   optional page footer, may use {page} and {pages} (or footer.blade.php)
+ *   header.html.php   optional page header, the same way (or header.blade.php)
  *   lang/{locale}.php optional labels, read in views with $doc->t('key')
  */
 class Template
@@ -99,20 +100,15 @@ class Template
         return $this->manifest['margins'] ?? null;
     }
 
+    /** The PDF view: pdf.html.php, or pdf.blade.php in Laravel apps. */
     public function pdfView(): string
     {
-        $file = $this->path.'/pdf.blade.php';
-
-        if (! is_file($file)) {
-            throw new RuntimeException("Template [{$this->name}] has no pdf.blade.php.");
-        }
-
-        return $file;
+        return $this->view('pdf') ?? throw new RuntimeException("Template [{$this->name}] has no pdf.html.php or pdf.blade.php.");
     }
 
     public function hasPdfView(): bool
     {
-        return is_file($this->path.'/pdf.blade.php');
+        return $this->view('pdf') !== null;
     }
 
     /**
@@ -124,7 +120,7 @@ class Template
         return $this->layout('word.php') ?? $this->layout('layout.php');
     }
 
-    /** The code layout for PDFs when there is no pdf.blade.php: layout.php, then word.php. */
+    /** The code layout for PDFs when there is no PDF view: layout.php, then word.php. */
     public function pdfLayout(): ?callable
     {
         return $this->layout('layout.php') ?? $this->layout('word.php');
@@ -163,12 +159,24 @@ class Template
 
     public function footerView(): ?string
     {
-        return is_file($this->path.'/footer.blade.php') ? $this->path.'/footer.blade.php' : null;
+        return $this->view('footer');
     }
 
     public function headerView(): ?string
     {
-        return is_file($this->path.'/header.blade.php') ? $this->path.'/header.blade.php' : null;
+        return $this->view('header');
+    }
+
+    /** "pdf" as pdf.html.php, which works everywhere, or else pdf.blade.php. */
+    private function view(string $name): ?string
+    {
+        foreach (["{$name}.html.php", "{$name}.blade.php"] as $file) {
+            if (is_file($this->path.'/'.$file)) {
+                return $this->path.'/'.$file;
+            }
+        }
+
+        return null;
     }
 
     public function translations(string $locale): array
