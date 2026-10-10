@@ -95,6 +95,18 @@ class DocContext
         };
     }
 
+    /** The month's name in the document's language: "سبتمبر" or "September". */
+    public function monthName(\DateTimeInterface|string|int $date): string
+    {
+        return Dates::monthName(Dates::parse($date), $this->locale);
+    }
+
+    /** The weekday's name in the document's language: "الخميس" or "Thursday". */
+    public function dayName(\DateTimeInterface|string|int $date): string
+    {
+        return Dates::dayName(Dates::parse($date), $this->locale);
+    }
+
     /** Format a number with thousands separators. Digits follow the document's numerals setting. */
     public function number(int|float|string|null $value, int $decimals = 2): HtmlString
     {
