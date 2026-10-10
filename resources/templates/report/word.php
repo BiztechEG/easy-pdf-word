@@ -1,6 +1,7 @@
 <?php
 
 use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
+use BiztechEG\EasyPdfWord\Support\Data;
 use BiztechEG\EasyPdfWord\Support\Dates;
 use BiztechEG\EasyPdfWord\Support\DocContext;
 
@@ -64,7 +65,7 @@ return function (DocumentBuilder $word, array $data, DocContext $doc): void {
         $cells = [(string) ($i + 1)];
 
         foreach ($columns as $column) {
-            $cells[] = $format($column, data_get($row, $column['key']));
+            $cells[] = $format($column, Data::get($row, $column['key']));
         }
 
         $rows[] = $cells;
