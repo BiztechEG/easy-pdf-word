@@ -91,9 +91,23 @@ class PlainPhpTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('is a Blade view, which needs Laravel');
 
+        self::docs()->template('blade-only')->toHtml();
+    }
+
+    public function test_every_bundled_template_works_without_laravel(): void
+    {
         $docs = self::docs();
 
-        $docs->template('letter', $docs->templates()->get('letter')->sample())->toHtml();
+        foreach ($docs->templates()->all() as $name => $template) {
+            if (! $docs->templates()->isBundled($name)) {
+                continue;
+            }
+
+            $document = $docs->template($name, $template->sample())->locale('ar');
+
+            $this->assertStringStartsWith('%PDF', $document->pdf()->content(), $name);
+            $this->assertStringStartsWith('PK', $document->word()->content(), $name);
+        }
     }
 
     public function test_zips_files(): void

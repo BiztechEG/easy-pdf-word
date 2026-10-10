@@ -72,14 +72,6 @@ class CoreBoundaryTest extends TestCase
         $this->assertSame([], $problems, "Core code must work without Laravel:\n".implode("\n", $problems));
     }
 
-    /** Blade views not yet converted to plain PHP. */
-    private const BLADE_TEMPLATES = [
-        'certificate/pdf.blade.php',
-        'invoice/pdf.blade.php',
-        'letter/pdf.blade.php',
-        'report/pdf.blade.php',
-    ];
-
     public function test_bundled_templates_do_not_use_laravel_or_carbon(): void
     {
         $base = dirname(__DIR__, 2).'/resources/templates';
@@ -101,7 +93,7 @@ class CoreBoundaryTest extends TestCase
         sort($blade);
 
         $this->assertSame([], $problems, "Bundled templates must work without Laravel:\n".implode("\n", $problems));
-        $this->assertSame(self::BLADE_TEMPLATES, $blade, 'Bundled templates are plain PHP; Blade views are still being converted.');
+        $this->assertSame([], $blade, 'Bundled templates are plain PHP, so they work without Laravel.');
     }
 
     public function test_the_check_finds_laravel_code(): void
