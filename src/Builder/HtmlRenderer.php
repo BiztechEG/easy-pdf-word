@@ -4,6 +4,7 @@ namespace BiztechEG\EasyPdfWord\Builder;
 
 use BiztechEG\EasyPdfWord\Support\Color;
 use BiztechEG\EasyPdfWord\Support\DocContext;
+use BiztechEG\EasyPdfWord\Support\Html;
 use BiztechEG\EasyPdfWord\Support\Qr;
 
 /**
@@ -44,7 +45,7 @@ class HtmlRenderer
         ];
 
         // A heading stays on the same page as the text after it.
-        $text = empty($style['ltr']) ? e($block['text']) : '<bdo dir="ltr">'.e($block['text']).'</bdo>';
+        $text = empty($style['ltr']) ? Html::escape($block['text']) : '<bdo dir="ltr">'.Html::escape($block['text']).'</bdo>';
 
         return '<div style="'.$this->css($style, $doc).' margin: 0 0 3mm 0; page-break-after: avoid;">'.$text.'</div>';
     }
@@ -146,7 +147,7 @@ class HtmlRenderer
         }
 
         if (! empty($cell['qr'])) {
-            return '<img src="'.e(Qr::dataUri($cell['qr'])).'" style="width: '.(float) ($cell['width'] ?? 30).'mm;">';
+            return '<img src="'.Html::escape(Qr::dataUri($cell['qr'])).'" style="width: '.(float) ($cell['width'] ?? 30).'mm;">';
         }
 
         $lines = $cell['lines'] ?? [$cell['text'] ?? ''];
@@ -161,7 +162,7 @@ class HtmlRenderer
 
     private function cellImage(?string $src, array $style): string
     {
-        return $src ? '<img src="'.e($src).'" style="width: '.(float) ($style['width'] ?? 30).'mm;">' : '';
+        return $src ? '<img src="'.Html::escape($src).'" style="width: '.(float) ($style['width'] ?? 30).'mm;">' : '';
     }
 
     /**
@@ -191,10 +192,10 @@ class HtmlRenderer
         $text = (string) ($run['text'] ?? '');
 
         if (! empty($run['ltr'])) {
-            return '<bdo dir="ltr">'.nl2br(e($text)).'</bdo>';
+            return '<bdo dir="ltr">'.nl2br(Html::escape($text)).'</bdo>';
         }
 
-        $html = nl2br(e($text));
+        $html = nl2br(Html::escape($text));
 
         return $doc->isRtl()
             ? preg_replace('/(?<![\p{L}\p{N}])(?<![\p{N}] )- ?[\d٠-٩][\d٠-٩.,٫٬]*/u', '<bdo dir="ltr">$0</bdo>', $html) ?? $html
@@ -207,7 +208,7 @@ class HtmlRenderer
             return '';
         }
 
-        return '<div style="text-align: '.$this->align($block['align'], $doc).';"><img src="'.e($src).'" style="width: '
+        return '<div style="text-align: '.$this->align($block['align'], $doc).';"><img src="'.Html::escape($src).'" style="width: '
             .(float) $block['width'].'mm;"></div>';
     }
 
