@@ -72,6 +72,38 @@ class CoreBoundaryTest extends TestCase
         $this->assertSame([], $problems, "Core code must work without Laravel:\n".implode("\n", $problems));
     }
 
+    /** Blade views not yet converted to plain PHP. */
+    private const BLADE_TEMPLATES = [
+        'certificate/pdf.blade.php',
+        'invoice/pdf.blade.php',
+        'letter/pdf.blade.php',
+        'report/pdf.blade.php',
+    ];
+
+    public function test_bundled_templates_do_not_use_laravel_or_carbon(): void
+    {
+        $base = dirname(__DIR__, 2).'/resources/templates';
+        $problems = [];
+        $blade = [];
+
+        foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($base, RecursiveDirectoryIterator::SKIP_DOTS)) as $file) {
+            $relative = substr((string) $file, strlen($base) + 1);
+
+            if (str_ends_with($relative, '.blade.php')) {
+                $blade[] = $relative;
+            } elseif (str_ends_with($relative, '.php')) {
+                foreach ($this->laravelUses((string) file_get_contents((string) $file), 'Illuminate|Carbon') as [$line, $what]) {
+                    $problems[] = "resources/templates/{$relative}:{$line} uses {$what}";
+                }
+            }
+        }
+
+        sort($blade);
+
+        $this->assertSame([], $problems, "Bundled templates must work without Laravel:\n".implode("\n", $problems));
+        $this->assertSame(self::BLADE_TEMPLATES, $blade, 'Bundled templates are plain PHP; Blade views are still being converted.');
+    }
+
     public function test_the_check_finds_laravel_code(): void
     {
         $code = <<<'PHP'
@@ -119,7 +151,7 @@ class CoreBoundaryTest extends TestCase
     }
 
     /** @return list<array{int, string}> line => what was used */
-    private function laravelUses(string $code): array
+    private function laravelUses(string $code, string $namespaces = 'Illuminate'): array
     {
         $tokens = array_values(array_filter(
             token_get_all($code),
@@ -134,7 +166,7 @@ class CoreBoundaryTest extends TestCase
 
             [$id, $text, $line] = $token;
 
-            if (in_array($id, [T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED], true) && preg_match('/^\\\\?Illuminate\\\\/', $text)) {
+            if (in_array($id, [T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED], true) && preg_match('/^\\\\?('.$namespaces.')\\\\/', $text)) {
                 $found[] = [$line, $text];
 
                 continue;
