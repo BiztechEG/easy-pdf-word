@@ -3,6 +3,7 @@
 namespace BiztechEG\EasyPdfWord\Output;
 
 use Closure;
+use InvalidArgumentException;
 use RuntimeException;
 use ZipArchive;
 
@@ -150,7 +151,33 @@ class File
     }
 
     /**
-     * Several files in one .zip: names as keys, or a list where each file keeps its own name.
+     * Several files in one .zip, built on the first call that needs its bytes.
+     *
+     * @param  array<int|string, File>  $files  names as keys, or a list where each file keeps its own name
+     */
+    public static function zipOf(array $files, string $filename = 'documents.zip'): self
+    {
+        self::checkFiles($files);
+
+        return self::zip(fn () => [self::archive($files), 'zip'], $filename);
+    }
+
+    /** @param  array<int|string, mixed>  $files */
+    public static function checkFiles(array $files): void
+    {
+        if ($files === []) {
+            throw new InvalidArgumentException('A ZIP file needs at least one file.');
+        }
+
+        foreach ($files as $file) {
+            if (! $file instanceof self) {
+                throw new InvalidArgumentException('A ZIP file takes files made by ->pdf(), ->word() or zip(), got '.get_debug_type($file).'.');
+            }
+        }
+    }
+
+    /**
+     * The bytes of a .zip holding the files: names as keys, or a list where each file keeps its own name.
      *
      * @param  array<int|string, File>  $files
      */
