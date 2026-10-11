@@ -49,6 +49,27 @@ class OutputFileTest extends TestCase
         $this->assertSame('bytes', ob_get_clean());
     }
 
+    public function test_download_name_has_a_latin_fallback(): void
+    {
+        $file = new class(fn () => ['bytes', 'mpdf'], 'document.pdf', 'application/pdf', 'pdf') extends File
+        {
+            public function header(string $name): string
+            {
+                return $this->disposition('attachment', $name);
+            }
+        };
+
+        $header = $file->header('فاتورة-1024.pdf');
+
+        $this->assertStringEndsWith("filename*=utf-8''".rawurlencode('فاتورة-1024.pdf'), $header);
+        $this->assertStringNotContainsString('?', $header);
+        $this->assertStringStartsWith(
+            function_exists('transliterator_transliterate') ? 'attachment; filename="fatwrt-1024.pdf"' : 'attachment; filename="______-1024.pdf"',
+            $header,
+        );
+        $this->assertSame('attachment; filename="invoice.pdf"', $file->header('invoice.pdf'));
+    }
+
     public function test_archive_keeps_names_unique_and_flat(): void
     {
         if (! class_exists(ZipArchive::class)) {
