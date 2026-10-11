@@ -4,6 +4,8 @@ All notable changes to `biztecheg/easy-pdf-word` are documented here. The format
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-11
+
 ### Added
 
 - First release of the framework-free core of [biztecheg/laravel-easy-pdf-word](https://github.com/BiztechEG/laravel-easy-pdf-word), split out with its git history. Everything that does not need Laravel lives here, under the same `BiztechEG\EasyPdfWord\` namespace, so code written for the Laravel package keeps working.
