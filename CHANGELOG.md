@@ -4,6 +4,10 @@ All notable changes to `biztecheg/easy-pdf-word` are documented here. The format
 
 ## [Unreleased]
 
+### Fixed
+
+- Files sent to the browser with an Arabic name got a fallback name of question marks (`??????-1024.pdf`) for old clients. With ext-intl the fallback is now written in Latin letters (`fatwrt-1024.pdf`), as in the Laravel package; without it, the unknown letters become `_`.
+
 ## [1.0.0] - 2026-10-11
 
 ### Added

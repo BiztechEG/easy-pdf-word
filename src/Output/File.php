@@ -131,7 +131,16 @@ class File
     /** The name in Latin letters ("%" is not allowed in this fallback). */
     protected function fallbackFilename(string $filename): string
     {
-        $ascii = function_exists('iconv') ? (string) @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $filename) : $filename;
+        if (function_exists('transliterator_transliterate')) {
+            // Arabic and other scripts in Latin letters: فاتورة becomes fatwrt.
+            $ascii = (string) transliterator_transliterate('Any-Latin; Latin-ASCII', $filename);
+        } elseif (function_exists('iconv')) {
+            // iconv writes "?" for letters it cannot spell in Latin.
+            $ascii = str_replace('?', '_', (string) @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $filename));
+        } else {
+            $ascii = $filename;
+        }
+
         $fallback = preg_replace('/[^\x20-\x24\x26-\x7E]/', '_', $ascii) ?? '';
 
         if (trim(pathinfo($fallback, PATHINFO_FILENAME), ' _-.') === '') {
