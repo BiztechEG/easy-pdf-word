@@ -87,7 +87,7 @@ class OutputFileTest extends TestCase
         }
 
         $pdf = fn (string $name) => File::pdf(fn () => [$name, 'mpdf'], $name);
-        $bytes = File::archive([$pdf('invoice'), $pdf('Invoice.pdf'), '../../evil' => $pdf('x')]);
+        $bytes = File::archive([$pdf('invoice'), $pdf('Invoice.pdf'), '../../evil' => $pdf('x'), "a\0b" => $pdf('y')]);
         $path = tempnam(sys_get_temp_dir(), 'zip-test');
         file_put_contents($path, $bytes);
         $zip = new ZipArchive;
@@ -101,6 +101,6 @@ class OutputFileTest extends TestCase
         $zip->close();
         unlink($path);
 
-        $this->assertSame(['invoice.pdf', 'Invoice (2).pdf', '-..-evil.pdf'], $names);
+        $this->assertSame(['invoice.pdf', 'Invoice (2).pdf', '-..-evil.pdf', 'ab.pdf'], $names);
     }
 }

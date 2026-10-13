@@ -157,8 +157,9 @@ class File
 
     protected function cleanFilename(string $filename): string
     {
-        // Slashes are not allowed in a file name.
-        $filename = str_replace(['/', '\\'], '-', $filename);
+        // Slashes are not allowed in a file name, and control characters
+        // (a NUL byte, a new line) would cut it short or break headers.
+        $filename = (string) preg_replace('/[\x00-\x1F\x7F]/', '', str_replace(['/', '\\'], '-', $filename));
         $extension = '.'.$this->extension();
 
         return $this->extension() === '' || str_ends_with(strtolower($filename), $extension) ? $filename : $filename.$extension;
