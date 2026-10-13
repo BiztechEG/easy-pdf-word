@@ -60,7 +60,8 @@ final class Dates
 
     /**
      * The month's name in the language: "سبتمبر", "September". Arabic and
-     * English are built in; other languages need ext-intl, else English.
+     * English are built in; regions (ar_SY: "أيلول") and other languages
+     * need ext-intl, else the built-in Arabic or English names.
      */
     public static function monthName(DateTimeInterface $date, string $locale): string
     {
@@ -76,8 +77,10 @@ final class Dates
     private static function name(DateTimeInterface $date, string $locale, array $names, int $index, string $pattern): string
     {
         $language = Locale::language($locale) ?? 'en';
+        // A region has its own names: أيلول in ar_SY, جانفي in ar_DZ.
+        $regional = strtolower(str_replace('-', '_', $locale)) !== $language;
 
-        if (isset($names[$language])) {
+        if (isset($names[$language]) && ! ($regional && class_exists(IntlDateFormatter::class))) {
             return $names[$language][$index];
         }
 
@@ -90,6 +93,6 @@ final class Dates
             }
         }
 
-        return $names['en'][$index];
+        return ($names[$language] ?? $names['en'])[$index];
     }
 }
