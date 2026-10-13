@@ -1,0 +1,30 @@
+{
+    "name": "Türkçe",
+    "direction": "ltr",
+    "months": ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"],
+    "days": ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"],
+    "date_format": "dd.MM.yyyy",
+    "datetime_format": "dd.MM.yyyy HH:mm",
+    "decimal_separator": ",",
+    "thousands_separator": ".",
+    "list_separator": ", ",
+    "amount_in_words": {
+        "amount": ":words :currency",
+        "fraction": ":amount ve :fraction/:per",
+        "only": "Yalnız :amount"
+    },
+    "currencies": {
+        "TRY": "TL"
+    },
+    "currency_names": {
+        "TRY": "Türk Lirası",
+        "USD": "ABD Doları",
+        "EUR": "Avro",
+        "GBP": "İngiliz Sterlini",
+        "EGP": "Mısır Lirası",
+        "SAR": "Suudi Arabistan Riyali",
+        "AED": "BAE Dirhemi",
+        "KWD": "Kuveyt Dinarı",
+        "QAR": "Katar Riyali"
+    }
+}
