@@ -5,6 +5,7 @@ namespace BiztechEG\EasyPdfWord\Tests\Unit;
 use BiztechEG\EasyPdfWord\Exceptions\ValidationFailed;
 use BiztechEG\EasyPdfWord\Validation\RuleValidator;
 use LogicException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /** The plain PHP validator without a Laravel app. Agreement with Laravel is in RuleValidatorParityTest. */
@@ -61,5 +62,34 @@ class RuleValidatorTest extends TestCase
 
         $this->assertSame(['items.0.discount' => ['Too large.']], $e->errors());
         $this->assertSame('Too large.', $e->getMessage());
+    }
+
+    /** Each case was checked against Laravel 12's validator, which gives the same result. */
+    public static function laravelCases(): array
+    {
+        return [
+            'required_if names the value the other field has' => [['method' => 'transfer'], ['cheque.number' => 'required_if:method,cheque,transfer'], ['cheque.number' => ['The cheque.number field is required when method is transfer.']]],
+            'required_if with a true other field' => [['method' => true], ['x' => 'required_if:method,true'], ['x' => ['The x field is required when method is true.']]],
+            'required_if with a null other field' => [['method' => null], ['x' => 'required_if:method,null'], ['x' => ['The x field is required when method is empty.']]],
+            'required_if names the matching row' => [['items' => [['a' => 1], ['a' => 2]]], ['items.*.b' => 'required_if:items.*.a,2'], ['items.1.b' => ['The items.1.b field is required when items.1.a is 2.']]],
+            'required_if skips a missing other field' => [[], ['x' => 'required_if:method,null'], []],
+            'in does not take false for 0' => [['b' => false], ['b' => 'in:0,1'], ['b' => ['The selected b is invalid.']]],
+            'date_format takes any of its formats' => [['p' => '2026/09'], ['p' => 'date_format:Y-m,Y/m'], []],
+            'after_or_equal refuses what is not a date' => [['to' => ['x']], ['to' => 'after_or_equal:from'], ['to' => ['The to field must be a date after or equal to from.']]],
+            'gt on text counts characters' => [['a' => 'abc'], ['a' => 'gt:5'], ['a' => ['The a field must be greater than 5 characters.']]],
+            'gt on another field shows its size' => [['a' => 'ab', 'b' => 'abcd'], ['a' => 'string|gt:b'], ['a' => ['The a field must be greater than 4 characters.']]],
+            'gt on lists counts items' => [['a' => [1], 'b' => [1, 2]], ['a' => 'array|gt:b'], ['a' => ['The a field must have more than 2 items.']]],
+        ];
+    }
+
+    #[DataProvider('laravelCases')]
+    public function test_rules_behave_as_in_laravel(array $data, array $rules, array $errors): void
+    {
+        try {
+            (new RuleValidator)->validate($data, $rules);
+            $this->assertSame([], $errors);
+        } catch (ValidationFailed $e) {
+            $this->assertSame($errors, $e->errors());
+        }
     }
 }
