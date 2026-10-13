@@ -1,6 +1,5 @@
 <?php
 
-use BiztechEG\EasyPdfWord\Support\Dates;
 use BiztechEG\EasyPdfWord\Support\Qr;
 use BiztechEG\EasyPdfWord\View\PageLayout;
 
@@ -51,12 +50,12 @@ ob_start();
             <div class="doc-title"><?= $doc->e($doc->t('title')) ?></div>
             <table class="meta">
                 <tr><td class="label"><?= $doc->e($doc->t('number')) ?></td><td><?= $doc->ltr($invoice['number']) ?></td></tr>
-                <tr><td class="label"><?= $doc->e($doc->t('date')) ?></td><td><?= $doc->e(Dates::parse($invoice['date'])->format('Y/m/d')) ?></td></tr>
+                <tr><td class="label"><?= $doc->e($doc->t('date')) ?></td><td><?= $doc->e($doc->date($invoice['date'])) ?></td></tr>
                 <?php if ($doc->isRtl() && $doc->hasHijri()) { ?>
                     <tr><td class="label"><?= $doc->e($doc->t('hijri_date')) ?></td><td><?= $doc->e($doc->hijri($invoice['date'])) ?></td></tr>
                 <?php } ?>
                 <?php if (! empty($invoice['due_date'])) { ?>
-                    <tr><td class="label"><?= $doc->e($doc->t('due_date')) ?></td><td><?= $doc->e(Dates::parse($invoice['due_date'])->format('Y/m/d')) ?></td></tr>
+                    <tr><td class="label"><?= $doc->e($doc->t('due_date')) ?></td><td><?= $doc->e($doc->date($invoice['due_date'])) ?></td></tr>
                 <?php } ?>
             </table>
         </td>

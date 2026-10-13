@@ -17,7 +17,7 @@ use BiztechEG\EasyPdfWord\Zatca\ZatcaQr;
 return [
     'title' => 'Credit note',
     'description' => 'Credit or debit note against an invoice with the reason, items, VAT and optional ZATCA or e-invoice QR.',
-    'locales' => ['ar', 'en'],
+    'locales' => ['ar', 'en', 'tr'],
     'paper' => 'A4',
 
     'fields' => [

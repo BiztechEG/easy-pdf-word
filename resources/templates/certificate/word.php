@@ -1,7 +1,6 @@
 <?php
 
 use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
-use BiztechEG\EasyPdfWord\Support\Dates;
 use BiztechEG\EasyPdfWord\Support\DocContext;
 
 /*
@@ -14,7 +13,7 @@ return function (DocumentBuilder $word, array $data, DocContext $doc): void {
     $muted = $doc->theme('muted', '#6B7280');
     $logo = $doc->theme('logo');
     $type = $data['type'];
-    $format = fn ($value) => Dates::parse($value)->format('Y/m/d');
+    $format = fn ($value) => $doc->date($value);
     $center = fn (array $style = []) => $style + ['align' => 'center', 'space_after' => 2];
 
     $word->spacer(6);
@@ -42,7 +41,7 @@ return function (DocumentBuilder $word, array $data, DocContext $doc): void {
     ]));
 
     if ($facts !== []) {
-        $word->paragraph(implode($doc->isRtl() ? '، ' : ', ', $facts), $center(['size' => 11, 'color' => $muted]));
+        $word->paragraph($doc->join($facts), $center(['size' => 11, 'color' => $muted]));
     }
 
     if (! empty($data['details'])) {

@@ -1,7 +1,6 @@
 <?php
 
 use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
-use BiztechEG\EasyPdfWord\Support\Dates;
 use BiztechEG\EasyPdfWord\Support\DocContext;
 
 /*
@@ -19,7 +18,7 @@ return function (DocumentBuilder $word, array $data, DocContext $doc): void {
     $currency = $invoice['currency'];
     $decimals = $doc->decimals($currency);
     $currencyLabel = $doc->t('currencies.'.$currency) === 'currencies.'.$currency ? $currency : $doc->t('currencies.'.$currency);
-    $date = fn ($value) => Dates::parse($value)->format('Y/m/d');
+    $date = fn ($value) => $doc->date($value);
     $label = fn (string $text) => ['text' => $text, 'color' => $muted];
 
     // Seller name and logo, then the title and invoice details.

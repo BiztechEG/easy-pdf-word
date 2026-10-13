@@ -73,6 +73,34 @@ class DocContext
     }
 
     /**
+     * A key of the document language's file in resources/lang, e.g.
+     * "decimal_separator" or "months"; English fills the gaps.
+     */
+    public function language(string $key, mixed $default = null): mixed
+    {
+        return Language::get($this->locale, $key, $default);
+    }
+
+    /**
+     * The text with a capital first letter, for labels that open a line
+     * (":Ordinal party"). Unlike ucfirst() it handles any letter, and
+     * Turkish and Azerbaijani "i" becomes "İ".
+     */
+    public function ucfirst(string $text): string
+    {
+        $first = mb_substr($text, 0, 1, 'UTF-8');
+        $upper = $first === 'i' && in_array(Locale::language($this->locale), ['tr', 'az'], true) ? 'İ' : mb_strtoupper($first, 'UTF-8');
+
+        return $upper.mb_substr($text, 1, null, 'UTF-8');
+    }
+
+    /** Values joined as the language lists them: "a, b" or "أ، ب". */
+    public function join(array $values): string
+    {
+        return implode($this->language('list_separator'), $values);
+    }
+
+    /**
      * Escape a value for HTML in plain PHP views, as {{ }} does in Blade:
      * <?= $doc->e($invoice['number']) ?>. HTML from ltr(), number() and the
      * like is printed as it is.
@@ -114,6 +142,16 @@ class DocContext
         return new \DateTimeZone($this->timezone ?? date_default_timezone_get());
     }
 
+    /**
+     * A date as the document's language writes it: 2026/10/08 in Arabic
+     * and English, 08.10.2026 in Turkish; with $time, the hour too. The
+     * patterns are date_format and datetime_format in resources/lang.
+     */
+    public function date(\DateTimeInterface|string|int|null $date, bool $time = false): string
+    {
+        return Dates::format(Dates::parse($date), $this->language($time ? 'datetime_format' : 'date_format'));
+    }
+
     /** The month's name in the document's language: "سبتمبر" or "September". */
     public function monthName(\DateTimeInterface|string|int $date): string
     {
@@ -126,10 +164,14 @@ class DocContext
         return Dates::dayName(Dates::parse($date), $this->locale);
     }
 
-    /** Format a number with thousands separators. Digits follow the document's numerals setting. */
+    /**
+     * Format a number with thousands separators, as the document's language
+     * writes them: 1,250.50 in Arabic and English, 1.250,50 in Turkish.
+     * Digits follow the document's numerals setting.
+     */
     public function number(int|float|string|null $value, int $decimals = 2): HtmlString
     {
-        $formatted = number_format(self::toFloat($value), self::clampDecimals($decimals));
+        $formatted = $this->numberText($value, $decimals);
 
         // Keeps the minus sign before the digits in RTL text ("-2.3", not "2.3-").
         return new HtmlString(str_starts_with($formatted, '-') ? '<bdo dir="ltr">'.$formatted.'</bdo>' : $formatted);
@@ -141,7 +183,7 @@ class DocContext
      */
     public function numberText(int|float|string|null $value, int $decimals = 2): string
     {
-        return number_format(self::toFloat($value), self::clampDecimals($decimals));
+        return number_format(self::toFloat($value), self::clampDecimals($decimals), $this->language('decimal_separator'), $this->language('thousands_separator'));
     }
 
     /** Decimals can come from data (a report column), so a huge value must not build a huge string. */
@@ -156,10 +198,12 @@ class DocContext
         return is_string($value) ? (float) str_replace([',', ' '], '', Numerals::toLatin($value)) : (float) $value;
     }
 
-    /** A rate or percentage with only the decimals it needs: 14, 2.5, 0.75. */
+    /** A rate or percentage with only the decimals it needs: 14, 2.5, 0.75 (2,5 in Turkish). */
     public function rate(int|float|string|null $value): string
     {
-        return rtrim(rtrim(number_format(self::toFloat($value), 2, '.', ''), '0'), '.');
+        $rate = rtrim(rtrim(number_format(self::toFloat($value), 2, '.', ''), '0'), '.');
+
+        return str_replace('.', $this->language('decimal_separator'), $rate);
     }
 
     public function money(int|float|string|null $value, ?string $currency = null, int $decimals = 2): HtmlString
@@ -190,12 +234,13 @@ class DocContext
 
     /**
      * An amount in words in the document's language: Arabic tafqeet, or the
-     * intl spell-out for other languages ("one thousand two hundred EGP").
-     * Empty when neither is available.
+     * intl spell-out for other languages ("one thousand two hundred EGP"),
+     * worded by "amount_in_words" in the language file ("Yalnız bin iki yüz
+     * Türk lirası"). Empty when neither is available.
      */
     public function inWords(int|float|string $amount, string $currency, bool $only = true): string
     {
-        $language = strtolower(preg_split('/[-_]/', $this->locale)[0]);
+        $language = Locale::language($this->locale) ?? 'en';
 
         if ($language === 'ar') {
             return $this->tafqeet($amount, $currency, $only);
@@ -214,7 +259,14 @@ class DocContext
             $words = trim(str_replace($formatter->format(1), '', $formatter->format(-1))).' '.$words;
         }
 
-        return trim($words.' '.strtoupper($currency).($fraction > 0 ? ' and '.$fraction.'/'.$per : '').($only ? ' only' : ''));
+        $code = strtoupper($currency);
+        $text = strtr($this->language('amount_in_words.amount'), [':words' => $words, ':currency' => $this->language('currency_names.'.$code) ?? $code]);
+
+        if ($fraction > 0) {
+            $text = strtr($this->language('amount_in_words.fraction'), [':amount' => $text, ':fraction' => $fraction, ':per' => $per]);
+        }
+
+        return trim($only ? strtr($this->language('amount_in_words.only'), [':amount' => $text]) : $text);
     }
 
     /** Decimal places of the currency's amounts: 3 for KWD, 2 for most. */
@@ -238,7 +290,10 @@ class DocContext
         return [(int) $value, (int) round(abs($value - (int) $value) * $per), $per];
     }
 
-    /** A currency's short label from the template's "currencies" labels, or its code. */
+    /**
+     * A currency's short label: from the template's "currencies" labels,
+     * else the language file's ("ج.م", "TL"), else its code.
+     */
     public function currency(string $code): string
     {
         $code = strtoupper($code);
@@ -248,13 +303,8 @@ class DocContext
             return $label;
         }
 
-        return $this->isRtl() ? (self::ARABIC_CURRENCIES[$code] ?? $code) : $code;
+        return (string) ($this->language('currencies.'.$code) ?? $code);
     }
-
-    private const ARABIC_CURRENCIES = [
-        'EGP' => 'ج.م', 'SAR' => 'ر.س', 'AED' => 'د.إ', 'KWD' => 'د.ك', 'QAR' => 'ر.ق',
-        'BHD' => 'د.ب', 'OMR' => 'ر.ع', 'JOD' => 'د.أ', 'USD' => 'دولار', 'EUR' => 'يورو',
-    ];
 
     /** Hijri dates need the intl extension; templates skip them without it. */
     public function hasHijri(): bool

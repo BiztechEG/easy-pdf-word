@@ -5,12 +5,12 @@
 
         return $word === 'ordinals.'.$n ? (string) $n : $word;
     };
-    $label = fn (int $n) => $doc->t('party', ['ordinal' => $ordinal($n), 'Ordinal' => ucfirst($ordinal($n))]);
+    $label = fn (int $n) => $doc->t('party', ['ordinal' => $ordinal($n), 'Ordinal' => $doc->ucfirst($ordinal($n))]);
 ?>
 <table style="width: 100%; font-size: 8pt; color: #6B7280;">
     <tr>
         <?php foreach (array_slice($parties, 0, 3) as $i => $party) { ?>
-            <td style="text-align: <?= $doc->start() ?>; padding-bottom: 2mm;"><?= $doc->e($doc->t('initials', ['party' => $label($i + 1), 'Party' => ucfirst($label($i + 1))])) ?>: ....................</td>
+            <td style="text-align: <?= $doc->start() ?>; padding-bottom: 2mm;"><?= $doc->e($doc->t('initials', ['party' => $label($i + 1), 'Party' => $doc->ucfirst($label($i + 1))])) ?>: ....................</td>
         <?php } ?>
     </tr>
 </table>

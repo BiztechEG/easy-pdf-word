@@ -13,7 +13,7 @@
 return [
     'title' => 'Delivery note',
     'description' => 'Delivery note without prices: delivered, ordered and remaining quantities, transport details and signatures.',
-    'locales' => ['ar', 'en'],
+    'locales' => ['ar', 'en', 'tr'],
     'paper' => 'A4',
 
     'fields' => [

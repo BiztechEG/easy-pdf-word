@@ -1,0 +1,36 @@
+{
+    "title": {
+        "receipt": "Tahsilat Makbuzu",
+        "payment": "Tediye Makbuzu"
+    },
+    "number": "Makbuz No.",
+    "date": "Tarih",
+    "amount": "Tutar",
+    "party": {
+        "receipt": "Ödeyen",
+        "payment": "Ödeme yapılan"
+    },
+    "amount_in_words": "Yazıyla",
+    "for": "Açıklama",
+    "method": "Ödeme şekli",
+    "methods": {
+        "cash": "Nakit",
+        "cheque": "Çek",
+        "transfer": "Banka havalesi",
+        "card": "Kredi kartı"
+    },
+    "cheque_number": "Çek No.",
+    "bank": "Banka",
+    "cheque_date": "Vade tarihi",
+    "reference": "Referans",
+    "notes": "Notlar",
+    "signature_labels": {
+        "payer": "Ödeyen",
+        "receiver": "Teslim alan",
+        "cashier": "Kasiyer",
+        "accountant": "Muhasebeci",
+        "manager": "Mali işler müdürü"
+    },
+    "page": "Sayfa",
+    "of": "/"
+}

@@ -15,7 +15,7 @@ use BiztechEG\EasyPdfWord\Support\Currency;
 return [
     'title' => 'Purchase order',
     'description' => 'Purchase order to a supplier with items, optional VAT, delivery details, payment terms and approvals.',
-    'locales' => ['ar', 'en'],
+    'locales' => ['ar', 'en', 'tr'],
     'paper' => 'A4',
 
     'fields' => [

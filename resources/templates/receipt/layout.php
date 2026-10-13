@@ -2,7 +2,6 @@
 
 use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
 use BiztechEG\EasyPdfWord\Support\Color;
-use BiztechEG\EasyPdfWord\Support\Dates;
 use BiztechEG\EasyPdfWord\Support\DocContext;
 
 /*
@@ -15,7 +14,7 @@ return function (DocumentBuilder $voucher, array $data, DocContext $doc): void {
     $muted = $doc->theme('muted', '#6B7280');
     $border = $doc->theme('border', '#E5E7EB');
     $type = $data['type'];
-    $date = fn ($value) => Dates::parse($value)->format('Y/m/d');
+    $date = fn ($value) => $doc->date($value);
     $logo = $doc->theme('logo');
 
     // Company and voucher title.

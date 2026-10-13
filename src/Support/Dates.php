@@ -13,16 +13,6 @@ use IntlDateFormatter;
  */
 final class Dates
 {
-    private const MONTHS = [
-        'ar' => ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'],
-        'en' => ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
-    ];
-
-    private const DAYS = [
-        'ar' => ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
-        'en' => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-    ];
-
     public static function now(): DateTimeImmutable
     {
         if (class_exists(\Carbon\CarbonImmutable::class)) {
@@ -59,29 +49,48 @@ final class Dates
     }
 
     /**
-     * The month's name in the language: "سبتمبر", "September". Arabic and
-     * English are built in; regions (ar_SY: "أيلول") and other languages
-     * need ext-intl, else the built-in Arabic or English names.
+     * A date in a pattern of the language files: "dd.MM.yyyy" is 08.10.2026.
+     * The letters are the common ones of ICU (and of Java, .NET and Python's
+     * Babel), so other versions of the library read the same patterns:
+     * yyyy yy MM M dd d HH H mm ss. Text in 'quotes' is printed as it is.
+     */
+    public static function format(DateTimeInterface $date, string $pattern): string
+    {
+        $letters = ['yyyy' => 'Y', 'yy' => 'y', 'MM' => 'm', 'M' => 'n', 'dd' => 'd', 'd' => 'j', 'HH' => 'H', 'H' => 'G', 'mm' => 'i', 'ss' => 's'];
+
+        return (string) preg_replace_callback(
+            "/'([^']*)'|yyyy|yy|MM|M|dd|d|HH|H|mm|ss/",
+            fn (array $m) => isset($m[1]) ? $m[1] : $date->format($letters[$m[0]]),
+            $pattern,
+        );
+    }
+
+    /**
+     * The month's name in the language: "سبتمبر", "September", "Eylül".
+     * Languages with a file in resources/lang have their names built in;
+     * regions (ar_SY: "أيلول") and other languages need ext-intl, else the
+     * English names.
      */
     public static function monthName(DateTimeInterface $date, string $locale): string
     {
-        return self::name($date, $locale, self::MONTHS, (int) $date->format('n') - 1, 'LLLL');
+        return self::name($date, $locale, 'months', (int) $date->format('n') - 1, 'LLLL');
     }
 
     /** The weekday's name in the language: "الخميس", "Thursday". */
     public static function dayName(DateTimeInterface $date, string $locale): string
     {
-        return self::name($date, $locale, self::DAYS, (int) $date->format('w'), 'cccc');
+        return self::name($date, $locale, 'days', (int) $date->format('w'), 'cccc');
     }
 
-    private static function name(DateTimeInterface $date, string $locale, array $names, int $index, string $pattern): string
+    private static function name(DateTimeInterface $date, string $locale, string $key, int $index, string $pattern): string
     {
         $language = Locale::language($locale) ?? 'en';
         // A region has its own names: أيلول in ar_SY, جانفي in ar_DZ.
         $regional = strtolower(str_replace('-', '_', $locale)) !== $language;
+        $names = Language::get($language, $key);
 
-        if (isset($names[$language]) && ! ($regional && class_exists(IntlDateFormatter::class))) {
-            return $names[$language][$index];
+        if (Language::has($language) && ! ($regional && class_exists(IntlDateFormatter::class))) {
+            return $names[$index];
         }
 
         if (class_exists(IntlDateFormatter::class)) {
@@ -93,6 +102,6 @@ final class Dates
             }
         }
 
-        return ($names[$language] ?? $names['en'])[$index];
+        return $names[$index];
     }
 }

@@ -17,7 +17,7 @@ use BiztechEG\EasyPdfWord\Support\Currency;
 | does: fees (T5-T20) on the net amount; table tax T2 on the net plus T3
 | and the taxable fees (T5-T12); VAT (T1) on the net plus T2, T3 and the
 | taxable fees; withholding (T4) on the net, deducted. Non-taxable fees
-| (T13-T20) are added to the total only.
+| (T13-T20) are added to the total only, and are labelled as T5-T12 are.
 |
 | The QR links to the document on the ETA portal when uuid and long_id are
 | given; "qr" overrides it.
@@ -26,7 +26,7 @@ use BiztechEG\EasyPdfWord\Support\Currency;
 return [
     'title' => 'Egyptian e-invoice',
     'description' => 'Printed copy of an Egyptian Tax Authority e-invoice, credit or debit note, with item codes, ETA tax types and portal QR.',
-    'locales' => ['ar', 'en'],
+    'locales' => ['ar', 'en', 'tr'],
     'paper' => 'A4',
     'margins' => [12, 12, 15, 12],
 

@@ -15,7 +15,7 @@ use BiztechEG\EasyPdfWord\Support\Currency;
 return [
     'title' => 'Payslip',
     'description' => 'Monthly payslip with earnings, deductions, net salary in words, attendance and signatures.',
-    'locales' => ['ar', 'en'],
+    'locales' => ['ar', 'en', 'tr'],
     'paper' => 'A4',
 
     'fields' => [

@@ -1,7 +1,6 @@
 <?php
 
 use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
-use BiztechEG\EasyPdfWord\Support\Dates;
 use BiztechEG\EasyPdfWord\Support\DocContext;
 
 /*
@@ -20,7 +19,7 @@ return function (DocumentBuilder $cn, array $data, DocContext $doc): void {
     $totals = $data['totals'];
     $currency = $doc->currency($note['currency']);
     $decimals = $doc->decimals($note['currency']);
-    $date = fn ($value) => Dates::parse($value)->format('Y/m/d');
+    $date = fn ($value) => $doc->date($value);
     $logo = $doc->theme('logo');
 
     // Seller, title and note details.

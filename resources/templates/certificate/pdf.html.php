@@ -1,13 +1,12 @@
 <?php
 
-use BiztechEG\EasyPdfWord\Support\Dates;
 use BiztechEG\EasyPdfWord\Support\Qr;
 use BiztechEG\EasyPdfWord\View\PageLayout;
 
 $primary = $doc->theme('primary', '#0F766E');
 $muted = $doc->theme('muted', '#6B7280');
 $logo = $doc->image($doc->theme('logo'));
-$format = fn ($value) => Dates::parse($value)->format('Y/m/d');
+$format = fn ($value) => $doc->date($value);
 
 // "خلال الفترة من ... إلى ...، بعدد 40 ساعة تدريبية، بتقدير امتياز"
 $facts = array_values(array_filter([
@@ -73,7 +72,7 @@ ob_start();
         <div class="course"><?= $doc->e($course) ?></div>
 
         <?php if ($facts !== []) { ?>
-            <div class="details"><?= $doc->e(implode($doc->isRtl() ? '، ' : ', ', $facts)) ?></div>
+            <div class="details"><?= $doc->e($doc->join($facts)) ?></div>
         <?php } ?>
         <?php if (! empty($details)) { ?>
             <div class="details"><?= $doc->e($details) ?></div>
