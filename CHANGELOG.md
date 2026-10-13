@@ -4,6 +4,8 @@ All notable changes to `biztecheg/easy-pdf-word` are documented here. The format
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-13
+
 ### Added
 
 - Turkish: the twelve bundled templates in Turkish (`->locale('tr')`), with Turkish dates (08.10.2026), numbers (1.250,50), month and day names, and amounts in words ("Yalnız bin iki yüz elli Türk Lirası ve 50/100").
