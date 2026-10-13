@@ -49,6 +49,16 @@ class OutputFileTest extends TestCase
         $this->assertSame('bytes', ob_get_clean());
     }
 
+    public function test_send_drops_output_waiting_in_a_buffer(): void
+    {
+        ob_start();
+        ob_start();
+        echo "\n";
+        File::pdf(fn () => ['bytes', 'mpdf'])->send('x.pdf');
+
+        $this->assertSame('bytes', ob_get_clean());
+    }
+
     public function test_download_name_has_a_latin_fallback(): void
     {
         $file = new class(fn () => ['bytes', 'mpdf'], 'document.pdf', 'application/pdf', 'pdf') extends File

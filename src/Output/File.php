@@ -103,13 +103,18 @@ class File
 
     /**
      * Send the file to the browser from plain PHP: as a download, or shown
-     * in the browser with $inline. Nothing may have been output before.
+     * in the browser with $inline. Output still in a buffer is dropped; once
+     * headers went out it is too late and this throws.
      */
     public function send(?string $filename = null, bool $inline = false): void
     {
         if (headers_sent($file, $line)) {
             throw new RuntimeException("Cannot send the file: output already started at {$file}:{$line}.");
         }
+
+        // Output still waiting in a buffer (a stray newline, a BOM, a notice)
+        // would go out before the file and cut off its end.
+        while (ob_get_level() > 0 && ob_get_length() > 0 && ob_end_clean());
 
         $content = $this->content();
         header('Content-Type: '.$this->mimeType());
