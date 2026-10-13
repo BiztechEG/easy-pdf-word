@@ -21,6 +21,7 @@ use BiztechEG\EasyPdfWord\Word\WordRenderer;
 use BadMethodCallException;
 use InvalidArgumentException;
 use LogicException;
+use RuntimeException;
 
 /**
  * A document being configured, without a framework. Every setter returns
@@ -492,6 +493,11 @@ class Document
         // A file the caller believes is locked must not go out open.
         if ($this->protection !== null) {
             throw new LogicException('Word files cannot take a password; ->password() works for PDF files only.');
+        }
+
+        // A .docx is a ZIP file; without the extension PhpWord fails later with a bare "Class not found".
+        if (! class_exists(\ZipArchive::class)) {
+            throw new RuntimeException('Word files need the PHP zip extension (ext-zip).');
         }
     }
 
