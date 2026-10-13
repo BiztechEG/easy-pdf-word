@@ -28,6 +28,9 @@ use RuntimeException;
  * $this; ->pdf() and ->word() turn it into a file. In Laravel the Doc
  * facade hands out PendingDocument, which adds queues, fakes and responses.
  *
+ * The protected properties and methods are the Laravel package's way in and
+ * are kept stable within a major version, as the public ones are.
+ *
  *   $docs = EasyPdfWord::create(['locale' => 'ar']);
  *   $docs->template('invoice', $data)->pdf()->save(__DIR__.'/invoice.pdf');
  *   $docs->make()->heading('تقرير')->table($rows)->word()->send('report.docx');
