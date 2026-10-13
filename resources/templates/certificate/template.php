@@ -10,6 +10,9 @@
 | issuer: who gives it; the company name in the theme by default.
 | from, to: the dates of the course; one of them alone is a single day.
 | verify_url: a link to check the certificate, shown as a QR code.
+|
+| The Arabic intro is passive (تُمنح هذه الشهادة), so it reads right whether
+| the issuer is a شركة or a معهد.
 */
 
 return [
