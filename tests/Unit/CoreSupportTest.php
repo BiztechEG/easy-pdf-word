@@ -48,6 +48,16 @@ class CoreSupportTest extends TestCase
         $this->assertSame($data, Data::get($data, null));
     }
 
+    public function test_dates_format_with_language_file_patterns(): void
+    {
+        $date = new DateTimeImmutable('2026-10-08 09:05:07');
+
+        $this->assertSame('08.10.2026', Dates::format($date, 'dd.MM.yyyy'));
+        $this->assertSame('2026/10/08 09:05', Dates::format($date, 'yyyy/MM/dd HH:mm'));
+        $this->assertSame('8/10/26 9:05:07', Dates::format($date, 'd/M/yy H:mm:ss'));
+        $this->assertSame('8 de 10', Dates::format($date, "d 'de' M"));
+    }
+
     public function test_dates_parse_like_carbon(): void
     {
         $this->assertSame('2026-10-08 00:00:00 UTC', Dates::parse('2026-10-08', 'UTC')->format('Y-m-d H:i:s T'));

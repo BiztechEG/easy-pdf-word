@@ -1,7 +1,6 @@
 <?php
 
 use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
-use BiztechEG\EasyPdfWord\Support\Dates;
 use BiztechEG\EasyPdfWord\Support\DocContext;
 
 /*
@@ -18,7 +17,7 @@ return function (DocumentBuilder $quote, array $data, DocContext $doc): void {
     $totals = $data['totals'];
     $currency = $doc->currency($info['currency']);
     $decimals = $doc->decimals($info['currency']);
-    $date = fn ($value) => Dates::parse($value)->format('Y/m/d');
+    $date = fn ($value) => $doc->date($value);
     $logo = $doc->theme('logo');
 
     // Company, title and quotation details.

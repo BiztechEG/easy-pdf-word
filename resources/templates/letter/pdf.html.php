@@ -47,7 +47,7 @@ ob_start();
                 <?php if (! empty($reference)) { ?>
                     <tr><td class="label"><?= $doc->e($doc->t('reference')) ?></td><td><?= $doc->e($reference) ?></td></tr>
                 <?php } ?>
-                <tr><td class="label"><?= $doc->e($doc->t('date')) ?></td><td><?= $doc->e($date->format('Y/m/d')) ?></td></tr>
+                <tr><td class="label"><?= $doc->e($doc->t('date')) ?></td><td><?= $doc->e($doc->date($date)) ?></td></tr>
                 <?php if (($show_hijri ?? true) && $doc->isRtl() && $doc->hasHijri()) { ?>
                     <tr><td class="label"><?= $doc->e($doc->t('hijri')) ?></td><td><?= $doc->e($doc->hijri($date)) ?></td></tr>
                 <?php } ?>

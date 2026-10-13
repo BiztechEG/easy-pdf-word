@@ -114,6 +114,16 @@ class DocContext
         return new \DateTimeZone($this->timezone ?? date_default_timezone_get());
     }
 
+    /**
+     * A date as the document's language writes it: 2026/10/08 in Arabic
+     * and English, 08.10.2026 in Turkish; with $time, the hour too. The
+     * patterns are date_format and datetime_format in resources/lang.
+     */
+    public function date(\DateTimeInterface|string|int|null $date, bool $time = false): string
+    {
+        return Dates::format(Dates::parse($date), Language::get($this->locale, $time ? 'datetime_format' : 'date_format'));
+    }
+
     /** The month's name in the document's language: "سبتمبر" or "September". */
     public function monthName(\DateTimeInterface|string|int $date): string
     {

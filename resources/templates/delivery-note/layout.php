@@ -1,7 +1,6 @@
 <?php
 
 use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
-use BiztechEG\EasyPdfWord\Support\Dates;
 use BiztechEG\EasyPdfWord\Support\DocContext;
 
 /*
@@ -17,7 +16,7 @@ return function (DocumentBuilder $note, array $data, DocContext $doc): void {
     $customer = $data['customer'];
     $shipTo = (array) ($data['ship_to'] ?? []);
     $transport = array_filter((array) ($data['transport'] ?? []));
-    $date = fn ($value) => Dates::parse($value)->format('Y/m/d');
+    $date = fn ($value) => $doc->date($value);
     $quantity = fn ($value) => $doc->numberText($value, floor((float) $value) == (float) $value ? 0 : 2);
     $logo = $doc->theme('logo');
 

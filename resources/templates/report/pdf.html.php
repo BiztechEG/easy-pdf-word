@@ -1,7 +1,6 @@
 <?php
 
 use BiztechEG\EasyPdfWord\Support\Data;
-use BiztechEG\EasyPdfWord\Support\Dates;
 use BiztechEG\EasyPdfWord\View\PageLayout;
 
 $primary = $doc->theme('primary', '#0F766E');
@@ -15,7 +14,7 @@ $align = fn ($column) => match ($column['align']) {
 $format = function ($column, $value) use ($doc) {
     return match ($column['format']) {
         'number', 'money' => $value === null || $value === '' ? '' : $doc->number($value, $column['decimals']),
-        'date' => $value ? Dates::parse($value)->format('Y/m/d') : '',
+        'date' => $value ? $doc->date($value) : '',
         default => $doc->text($value),
     };
 };
@@ -44,7 +43,7 @@ ob_start();
         </td>
         <td style="width: 35%; text-align: <?= $doc->end() ?>;" class="muted">
             <div><?= $doc->e($company['name'] ?? '') ?></div>
-            <div style="font-size: 9pt;"><?= $doc->e($doc->t('generated_at')) ?>: <?= $doc->e(Dates::parse($generated_at)->format('Y/m/d H:i')) ?></div>
+            <div style="font-size: 9pt;"><?= $doc->e($doc->t('generated_at')) ?>: <?= $doc->e($doc->date($generated_at, true)) ?></div>
         </td>
     </tr>
 </table>

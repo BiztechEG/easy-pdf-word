@@ -1,7 +1,6 @@
 <?php
 
 use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
-use BiztechEG\EasyPdfWord\Support\Dates;
 use BiztechEG\EasyPdfWord\Support\DocContext;
 
 /*
@@ -17,7 +16,7 @@ return function (DocumentBuilder $slip, array $data, DocContext $doc): void {
     $totals = $data['totals'];
     $currency = $doc->currency($data['currency']);
     $decimals = $doc->decimals($data['currency']);
-    $date = fn ($value) => Dates::parse($value)->format('Y/m/d');
+    $date = fn ($value) => $doc->date($value);
     $month = $doc->monthName($data['period'].'-01').' '.substr($data['period'], 0, 4);
     $logo = $doc->theme('logo');
 

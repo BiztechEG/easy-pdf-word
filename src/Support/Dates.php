@@ -49,6 +49,23 @@ final class Dates
     }
 
     /**
+     * A date in a pattern of the language files: "dd.MM.yyyy" is 08.10.2026.
+     * The letters are the common ones of ICU (and of Java, .NET and Python's
+     * Babel), so other versions of the library read the same patterns:
+     * yyyy yy MM M dd d HH H mm ss. Text in 'quotes' is printed as it is.
+     */
+    public static function format(DateTimeInterface $date, string $pattern): string
+    {
+        $letters = ['yyyy' => 'Y', 'yy' => 'y', 'MM' => 'm', 'M' => 'n', 'dd' => 'd', 'd' => 'j', 'HH' => 'H', 'H' => 'G', 'mm' => 'i', 'ss' => 's'];
+
+        return (string) preg_replace_callback(
+            "/'([^']*)'|yyyy|yy|MM|M|dd|d|HH|H|mm|ss/",
+            fn (array $m) => isset($m[1]) ? $m[1] : $date->format($letters[$m[0]]),
+            $pattern,
+        );
+    }
+
+    /**
      * The month's name in the language: "سبتمبر", "September", "Eylül".
      * Languages with a file in resources/lang have their names built in;
      * regions (ar_SY: "أيلول") and other languages need ext-intl, else the

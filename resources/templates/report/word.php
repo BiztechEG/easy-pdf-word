@@ -2,7 +2,6 @@
 
 use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
 use BiztechEG\EasyPdfWord\Support\Data;
-use BiztechEG\EasyPdfWord\Support\Dates;
 use BiztechEG\EasyPdfWord\Support\DocContext;
 
 /*
@@ -20,7 +19,7 @@ return function (DocumentBuilder $word, array $data, DocContext $doc): void {
 
     $format = fn (array $column, mixed $value) => match ($column['format']) {
         'number', 'money' => $value === null || $value === '' ? '' : $doc->numberText($value, $column['decimals']),
-        'date' => $value ? Dates::parse($value)->format('Y/m/d') : '',
+        'date' => $value ? $doc->date($value) : '',
         default => $doc->text($value),
     };
 
@@ -31,7 +30,7 @@ return function (DocumentBuilder $word, array $data, DocContext $doc): void {
         ])],
         ['lines' => [
             ['text' => $company['name'] ?? '', 'color' => $muted],
-            ['text' => $doc->t('generated_at').': '.Dates::parse($data['generated_at'])->format('Y/m/d H:i'), 'color' => $muted, 'size' => 9],
+            ['text' => $doc->t('generated_at').': '.$doc->date($data['generated_at'], true), 'color' => $muted, 'size' => 9],
         ], 'align' => 'end'],
     ]], ['columns' => [65, 35], 'borders' => false]);
 

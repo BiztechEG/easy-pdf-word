@@ -40,7 +40,7 @@ return function (DocumentBuilder $contract, array $data, DocContext $doc): void 
     $contract->line($primary);
     $contract->paragraph($doc->t(empty($info['place']) ? 'intro' : 'intro_place', [
         'day' => $doc->dayName($date),
-        'date' => $date->format('Y/m/d'),
+        'date' => $doc->date($date),
         'place' => $info['place'] ?? '',
     ]), $paragraph + ['bold' => true]);
 
