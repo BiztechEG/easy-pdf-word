@@ -271,7 +271,7 @@ class DocContext
      *
      * Only image files inside the allowed folders (config "images.paths")
      * are read, so a path in user data cannot pull in other files. URLs are
-     * passed on only when "images.remote" allows them (true, or their host).
+     * fetched only when "images.remote" allows them (true, or their host).
      */
     public function image(?string $source): ?string
     {
@@ -286,14 +286,11 @@ class DocContext
             return str_starts_with(strtolower($source), 'data:image/') ? self::dataUri(self::dataUriContent($source)) : null;
         }
 
+        // Fetched here for every engine: redirects are not followed (they could
+        // lead past the allowed hosts) and an SVG is checked before an engine
+        // reads the files and URLs it points to.
         if (preg_match('#^https?://#i', $source)) {
-            if (! $this->allowsRemote($source)) {
-                return null;
-            }
-
-            // mPDF and Word files fetch the URL without following redirects. A browser
-            // engine would follow them past the allowed hosts, so it gets the image here.
-            return $this->usesCssFonts() ? $this->fetchImage($source) : $source;
+            return $this->allowsRemote($source) ? $this->fetchImage($source) : null;
         }
 
         // Other schemes (phar://, ftp://, php://) and network shares are never read.
