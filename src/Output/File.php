@@ -146,7 +146,8 @@ class File
             $ascii = $filename;
         }
 
-        $fallback = preg_replace('/[^\x20-\x24\x26-\x7E]/', '_', $ascii) ?? '';
+        // One "_" per letter, not per byte, when nothing could spell it in Latin.
+        $fallback = preg_replace('/[^\x20-\x24\x26-\x7E]/u', '_', $ascii) ?? '';
 
         if (trim(pathinfo($fallback, PATHINFO_FILENAME), ' _-.') === '') {
             $fallback = 'document'.(pathinfo($filename, PATHINFO_EXTENSION) !== '' ? '.'.pathinfo($filename, PATHINFO_EXTENSION) : '');
