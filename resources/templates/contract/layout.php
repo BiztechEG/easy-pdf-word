@@ -23,7 +23,7 @@ return function (DocumentBuilder $contract, array $data, DocContext $doc): void 
 
         return $word === 'ordinals.'.$n ? (string) $n : $word;
     };
-    $label = fn (string $key, int $n) => $doc->t($key, ['ordinal' => $ordinal($n), 'Ordinal' => ucfirst($ordinal($n)), 'number' => $n]);
+    $label = fn (string $key, int $n) => $doc->t($key, ['ordinal' => $ordinal($n), 'Ordinal' => $doc->ucfirst($ordinal($n)), 'number' => $n]);
     $paragraph = ['align' => 'justify', 'size' => 11, 'line_height' => 1.5, 'space_after' => 2];
 
     // Title, number and the opening sentence.

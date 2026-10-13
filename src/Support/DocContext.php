@@ -81,6 +81,19 @@ class DocContext
         return Language::get($this->locale, $key, $default);
     }
 
+    /**
+     * The text with a capital first letter, for labels that open a line
+     * (":Ordinal party"). Unlike ucfirst() it handles any letter, and
+     * Turkish and Azerbaijani "i" becomes "İ".
+     */
+    public function ucfirst(string $text): string
+    {
+        $first = mb_substr($text, 0, 1, 'UTF-8');
+        $upper = $first === 'i' && in_array(Locale::language($this->locale), ['tr', 'az'], true) ? 'İ' : mb_strtoupper($first, 'UTF-8');
+
+        return $upper.mb_substr($text, 1, null, 'UTF-8');
+    }
+
     /** Values joined as the language lists them: "a, b" or "أ، ب". */
     public function join(array $values): string
     {
