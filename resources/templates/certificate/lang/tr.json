@@ -1,0 +1,44 @@
+{
+    "title": {
+        "completion": "Başarı Sertifikası",
+        "attendance": "Katılım Belgesi",
+        "participation": "Katılım Sertifikası",
+        "appreciation": "Teşekkür Belgesi"
+    },
+    "intro": {
+        "completion": "Bu belge",
+        "attendance": "Bu belge",
+        "participation": "Bu belge",
+        "appreciation": "Bu belge"
+    },
+    "statement": {
+        "completion": {
+            "male": "adlı katılımcıya aşağıdaki programı başarıyla tamamladığı için verilmiştir",
+            "female": "adlı katılımcıya aşağıdaki programı başarıyla tamamladığı için verilmiştir"
+        },
+        "attendance": {
+            "male": "adlı katılımcıya aşağıdaki programa katıldığı için verilmiştir",
+            "female": "adlı katılımcıya aşağıdaki programa katıldığı için verilmiştir"
+        },
+        "participation": {
+            "male": "adlı katılımcıya aşağıdaki etkinlikte yer aldığı için verilmiştir",
+            "female": "adlı katılımcıya aşağıdaki etkinlikte yer aldığı için verilmiştir"
+        },
+        "appreciation": {
+            "male": "adlı kişiye aşağıdaki çalışmaya yaptığı değerli katkılardan dolayı teşekkürlerimizle sunulmuştur",
+            "female": "adlı kişiye aşağıdaki çalışmaya yaptığı değerli katkılardan dolayı teşekkürlerimizle sunulmuştur"
+        }
+    },
+    "period": ":from - :to tarihleri arasında",
+    "on": ":date tarihinde",
+    "hours": {
+        "one": ":hours saatlik eğitim",
+        "two": ":hours saatlik eğitim",
+        "few": ":hours saatlik eğitim",
+        "many": ":hours saatlik eğitim"
+    },
+    "grade": ":grade derecesiyle",
+    "date": "Veriliş tarihi",
+    "number": "Sertifika No.",
+    "verify": "Doğrulamak için tarayın"
+}

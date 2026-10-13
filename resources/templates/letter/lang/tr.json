@@ -1,0 +1,12 @@
+{
+    "reference": "Sayı",
+    "date": "Tarih",
+    "hijri": "Hicri",
+    "to_title": ":title",
+    "subject": "Konu",
+    "greeting": "Sayın Yetkili,",
+    "closing": "Saygılarımızla,",
+    "cc": "Bilgi",
+    "page": "Sayfa",
+    "of": "/"
+}
