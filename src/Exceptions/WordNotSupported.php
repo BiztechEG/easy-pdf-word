@@ -13,6 +13,6 @@ class WordNotSupported extends LogicException
 
     public static function forSource(): self
     {
-        return new self('Word files are made from a template with word.php or word.docx, or from Doc::make(). Blade views and HTML only make PDFs.');
+        return new self('Word files are made from a template with word.php or word.docx, or from make() (Doc::make() in Laravel). Views and HTML only make PDFs.');
     }
 }

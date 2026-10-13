@@ -127,7 +127,7 @@ class PdfManager
 
         // A misspelt name is a mistake in the app, not an engine that failed.
         if (! $this->has($name)) {
-            throw new \InvalidArgumentException("Unknown PDF engine [{$name}]. Use mpdf, chromium, gotenberg or a name added with Doc::extend().");
+            throw new \InvalidArgumentException("Unknown PDF engine [{$name}]. Use mpdf, chromium, gotenberg or a name added with extend() (Doc::extend() in Laravel).");
         }
 
         try {
@@ -137,7 +137,7 @@ class PdfManager
                 throw match ($name) {
                     'mpdf' => DriverNotAvailable::missingPackage('mpdf', 'mpdf/mpdf'),
                     'browsershot' => DriverNotAvailable::missingPackage('browsershot', 'spatie/browsershot'),
-                    'gotenberg' => new DriverNotAvailable('The [gotenberg] engine needs the URL of a Gotenberg server in DOC_GOTENBERG_URL.'),
+                    'gotenberg' => new DriverNotAvailable('The [gotenberg] engine needs the URL of a Gotenberg server in the pdf.drivers.gotenberg.url setting (DOC_GOTENBERG_URL in Laravel).'),
                     default => new DriverNotAvailable("The [{$name}] PDF engine is not available."),
                 };
             }

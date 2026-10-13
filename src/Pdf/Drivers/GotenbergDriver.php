@@ -63,7 +63,7 @@ class GotenbergDriver implements PdfDriver
 
         // A proxy or a wrong URL can answer 200 with a web page.
         if (! str_starts_with($response->body, '%PDF-')) {
-            throw new RuntimeException('Gotenberg did not return a PDF; check DOC_GOTENBERG_URL. It returned: '.substr(strip_tags($response->body), 0, 200));
+            throw new RuntimeException('Gotenberg did not return a PDF; check its URL (pdf.drivers.gotenberg.url, DOC_GOTENBERG_URL in Laravel). It returned: '.substr(strip_tags($response->body), 0, 200));
         }
 
         return $response->body;
