@@ -42,6 +42,9 @@ class DocxTemplateFiller
     /** Decimals for amounts: those of the document's currency (KWD 3, EGP 2). */
     private int $decimals = 2;
 
+    /** Joins list values in a placeholder: "، " in Arabic, ", " in English. */
+    private string $separator = ', ';
+
     public function fill(string $path, array $data, DocContext $doc): string
     {
         if (! class_exists(TemplateProcessor::class)) {
@@ -55,6 +58,7 @@ class DocxTemplateFiller
             // The document's currency: top level, or in a group such as invoice, quote or document.
             $currency = $data['currency'] ?? self::first($data, fn ($value) => is_array($value) && is_string($value['currency'] ?? null))['currency'] ?? null;
             $this->decimals = $doc->decimals(is_string($currency) ? $currency : null);
+            $this->separator = (string) $doc->language('list_separator');
             $values = $this->flatten($data + ['theme' => $doc->theme, 't' => $doc->translations()]);
             $values += $this->extras($data, $doc);
             $processor = new TemplateProcessor($path);
@@ -142,7 +146,7 @@ class DocxTemplateFiller
 
         return array_filter([
             'doc.hijri_date' => $date && $doc->hasHijri() ? $doc->hijri($date) : null,
-            'doc.today' => Dates::now()->format('Y/m/d'),
+            'doc.today' => $doc->date(Dates::now()),
             'doc.qr' => ! empty($data['qr']) && is_string($data['qr']) ? Qr::dataUri($data['qr']) : null,
         ], fn ($value) => $value !== null);
     }
@@ -157,7 +161,7 @@ class DocxTemplateFiller
                 $flat += $this->flatten($value, $prefix.$key.'.');
             } elseif (is_array($value)) {
                 if ($value === [] || ! is_array(reset($value))) {
-                    $flat[$prefix.$key] = implode('، ', array_map('strval', $value));
+                    $flat[$prefix.$key] = implode($this->separator, array_map('strval', $value));
                 }
             } else {
                 $flat[$prefix.$key] = $value;

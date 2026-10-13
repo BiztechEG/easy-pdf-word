@@ -41,7 +41,7 @@ return function (DocumentBuilder $word, array $data, DocContext $doc): void {
     ]));
 
     if ($facts !== []) {
-        $word->paragraph(implode($doc->isRtl() ? '، ' : ', ', $facts), $center(['size' => 11, 'color' => $muted]));
+        $word->paragraph($doc->join($facts), $center(['size' => 11, 'color' => $muted]));
     }
 
     if (! empty($data['details'])) {

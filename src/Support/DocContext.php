@@ -73,6 +73,21 @@ class DocContext
     }
 
     /**
+     * A key of the document language's file in resources/lang, e.g.
+     * "decimal_separator" or "months"; English fills the gaps.
+     */
+    public function language(string $key, mixed $default = null): mixed
+    {
+        return Language::get($this->locale, $key, $default);
+    }
+
+    /** Values joined as the language lists them: "a, b" or "أ، ب". */
+    public function join(array $values): string
+    {
+        return implode($this->language('list_separator'), $values);
+    }
+
+    /**
      * Escape a value for HTML in plain PHP views, as {{ }} does in Blade:
      * <?= $doc->e($invoice['number']) ?>. HTML from ltr(), number() and the
      * like is printed as it is.
@@ -121,7 +136,7 @@ class DocContext
      */
     public function date(\DateTimeInterface|string|int|null $date, bool $time = false): string
     {
-        return Dates::format(Dates::parse($date), Language::get($this->locale, $time ? 'datetime_format' : 'date_format'));
+        return Dates::format(Dates::parse($date), $this->language($time ? 'datetime_format' : 'date_format'));
     }
 
     /** The month's name in the document's language: "سبتمبر" or "September". */
@@ -136,10 +151,14 @@ class DocContext
         return Dates::dayName(Dates::parse($date), $this->locale);
     }
 
-    /** Format a number with thousands separators. Digits follow the document's numerals setting. */
+    /**
+     * Format a number with thousands separators, as the document's language
+     * writes them: 1,250.50 in Arabic and English, 1.250,50 in Turkish.
+     * Digits follow the document's numerals setting.
+     */
     public function number(int|float|string|null $value, int $decimals = 2): HtmlString
     {
-        $formatted = number_format(self::toFloat($value), self::clampDecimals($decimals));
+        $formatted = $this->numberText($value, $decimals);
 
         // Keeps the minus sign before the digits in RTL text ("-2.3", not "2.3-").
         return new HtmlString(str_starts_with($formatted, '-') ? '<bdo dir="ltr">'.$formatted.'</bdo>' : $formatted);
@@ -151,7 +170,7 @@ class DocContext
      */
     public function numberText(int|float|string|null $value, int $decimals = 2): string
     {
-        return number_format(self::toFloat($value), self::clampDecimals($decimals));
+        return number_format(self::toFloat($value), self::clampDecimals($decimals), $this->language('decimal_separator'), $this->language('thousands_separator'));
     }
 
     /** Decimals can come from data (a report column), so a huge value must not build a huge string. */
@@ -166,10 +185,12 @@ class DocContext
         return is_string($value) ? (float) str_replace([',', ' '], '', Numerals::toLatin($value)) : (float) $value;
     }
 
-    /** A rate or percentage with only the decimals it needs: 14, 2.5, 0.75. */
+    /** A rate or percentage with only the decimals it needs: 14, 2.5, 0.75 (2,5 in Turkish). */
     public function rate(int|float|string|null $value): string
     {
-        return rtrim(rtrim(number_format(self::toFloat($value), 2, '.', ''), '0'), '.');
+        $rate = rtrim(rtrim(number_format(self::toFloat($value), 2, '.', ''), '0'), '.');
+
+        return str_replace('.', $this->language('decimal_separator'), $rate);
     }
 
     public function money(int|float|string|null $value, ?string $currency = null, int $decimals = 2): HtmlString

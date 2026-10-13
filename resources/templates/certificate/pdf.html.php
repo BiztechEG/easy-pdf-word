@@ -72,7 +72,7 @@ ob_start();
         <div class="course"><?= $doc->e($course) ?></div>
 
         <?php if ($facts !== []) { ?>
-            <div class="details"><?= $doc->e(implode($doc->isRtl() ? '، ' : ', ', $facts)) ?></div>
+            <div class="details"><?= $doc->e($doc->join($facts)) ?></div>
         <?php } ?>
         <?php if (! empty($details)) { ?>
             <div class="details"><?= $doc->e($details) ?></div>
