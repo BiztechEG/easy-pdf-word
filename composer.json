@@ -51,6 +51,7 @@
         "biztecheg/laravel-easy-pdf-word": "The Laravel package on top of this one: the Doc facade, config, Blade, storage, mail, queues and a preview page."
     },
     "conflict": {
+        "biztecheg/laravel-easy-pdf-word": "<1.4",
         "mpdf/mpdf": "<8.2",
         "phpoffice/phpword": "<1.4",
         "spatie/browsershot": "<5.4"
