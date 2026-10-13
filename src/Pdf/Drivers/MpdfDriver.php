@@ -111,11 +111,11 @@ class MpdfDriver implements PdfDriver
         $dir = $configured ?: sys_get_temp_dir().'/easy-pdf-word-'.$user;
 
         if (! is_dir($dir) && ! @mkdir($dir, $configured ? 0775 : 0700, true) && ! is_dir($dir)) {
-            throw new \RuntimeException("Cannot create the mPDF temp folder [{$dir}]. Set a writable folder in easy-pdf-word.pdf.drivers.mpdf.temp_dir.");
+            throw new \RuntimeException("Cannot create the mPDF temp folder [{$dir}]. Set a writable folder in the pdf.drivers.mpdf.temp_dir setting.");
         }
 
         if (! is_writable($dir)) {
-            throw new \RuntimeException("The mPDF temp folder [{$dir}] is not writable. Set a writable folder in easy-pdf-word.pdf.drivers.mpdf.temp_dir.");
+            throw new \RuntimeException("The mPDF temp folder [{$dir}] is not writable. Set a writable folder in the pdf.drivers.mpdf.temp_dir setting.");
         }
 
         return $dir;

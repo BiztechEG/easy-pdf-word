@@ -5,6 +5,7 @@ namespace BiztechEG\EasyPdfWord\Support;
 use BiztechEG\EasyPdfWord\Arabic\Arabic;
 use BiztechEG\EasyPdfWord\Arabic\Numerals;
 use BiztechEG\EasyPdfWord\Arabic\Tafqeet;
+use Closure;
 
 /**
  * Passed to every document view as $doc: direction, fonts, theme and
@@ -25,6 +26,7 @@ class DocContext
         private readonly ?array $imagePaths = null,
         private readonly bool|array $remoteImages = false,
         private readonly ?string $timezone = null,
+        private readonly ?Closure $warn = null,
     ) {}
 
     public function isRtl(): bool
@@ -271,7 +273,7 @@ class DocContext
      *
      * Only image files inside the allowed folders (config "images.paths")
      * are read, so a path in user data cannot pull in other files. URLs are
-     * passed on only when "images.remote" allows them (true, or their host).
+     * fetched only when "images.remote" allows them (true, or their host).
      */
     public function image(?string $source): ?string
     {
@@ -279,20 +281,22 @@ class DocContext
             return null;
         }
 
+        // The declared type is not trusted: mPDF sniffs the bytes and would
+        // follow the references inside an SVG labelled as a PNG. So the
+        // content is checked and the URI rebuilt with its real type.
         if (str_starts_with($source, 'data:')) {
-            $svg = stripos($source, 'data:image/svg') === 0;
-
-            return str_starts_with($source, 'data:image/') && (! $svg || self::isSafeSvg(self::dataUriContent($source))) ? $source : null;
+            return str_starts_with(strtolower($source), 'data:image/') ? self::dataUri(self::dataUriContent($source)) : null;
         }
 
+        // Fetched here for every engine: redirects are not followed (they could
+        // lead past the allowed hosts) and an SVG is checked before an engine
+        // reads the files and URLs it points to.
         if (preg_match('#^https?://#i', $source)) {
             if (! $this->allowsRemote($source)) {
-                return null;
+                return $this->leftOut($source, 'its host is not allowed in the images.remote setting');
             }
 
-            // mPDF and Word files fetch the URL without following redirects. A browser
-            // engine would follow them past the allowed hosts, so it gets the image here.
-            return $this->usesCssFonts() ? $this->fetchImage($source) : $source;
+            return $this->fetchImage($source);
         }
 
         // Other schemes (phar://, ftp://, php://) and network shares are never read.
@@ -302,7 +306,11 @@ class DocContext
 
         $path = realpath($source);
 
-        if ($path === false || ! is_file($path) || ! $this->isAllowedPath($path) || ! ($mime = $this->imageMime($path))) {
+        if ($path !== false && is_file($path) && ! $this->isAllowedPath($path)) {
+            return $this->leftOut($source, 'it is outside the folders in the images.paths setting');
+        }
+
+        if ($path === false || ! is_file($path) || ! ($mime = $this->imageMime($path))) {
             return null;
         }
 
@@ -315,6 +323,18 @@ class DocContext
         return 'data:'.$mime.';base64,'.base64_encode($content);
     }
 
+    /** Null, after telling the developer why an image they may have meant to show was left out. */
+    private function leftOut(string $source, string $reason): null
+    {
+        if ($this->warn !== null) {
+            // The source can come from user data: no line breaks, and kept short.
+            $source = mb_strimwidth((string) preg_replace('/[\x00-\x1F\x7F]/', '', $source), 0, 200, '...', 'UTF-8');
+            ($this->warn)("easy-pdf-word: image [{$source}] was left out: {$reason}.");
+        }
+
+        return null;
+    }
+
     /** An allowed image URL as a data URI: no redirects, 10 seconds, 10 MB at most. */
     private function fetchImage(string $url): ?string
     {
@@ -322,13 +342,19 @@ class DocContext
             'http' => ['timeout' => 10, 'follow_location' => 0, 'max_redirects' => 0],
         ]), 0, 10 * 1024 * 1024);
 
-        if (! is_string($content) || $content === '') {
+        return is_string($content) ? self::dataUri($content) : null;
+    }
+
+    /** Image bytes as a data URI of their real type, or null when they are not a safe image. */
+    private static function dataUri(string $content): ?string
+    {
+        if ($content === '') {
             return null;
         }
 
         $mime = (@getimagesizefromstring($content) ?: [])['mime'] ?? null;
 
-        if ($mime === null && str_contains(substr($content, 0, 1024), '<svg') && self::isSafeSvg($content)) {
+        if ($mime === null && preg_match('/<svg[\s>]/i', substr($content, 0, 1024)) && self::isSafeSvg($content)) {
             $mime = 'image/svg+xml';
         }
 

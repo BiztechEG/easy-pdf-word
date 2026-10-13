@@ -51,6 +51,15 @@ $docs = EasyPdfWord::create([
 
 `create()` takes the same settings as the Laravel package's `config/easy-pdf-word.php`; leave out what you do not change. `EasyPdfWord::defaults()` returns them all.
 
+Local images (a logo, a signature) are read only from the folders you list, and none are listed by default. Add yours, or the image is left out with a warning in the PHP error log:
+
+```php
+$docs = EasyPdfWord::create([
+    'images' => ['paths' => [__DIR__.'/images']],
+    'theme' => ['logo' => __DIR__.'/images/logo.png'],
+]);
+```
+
 ### A ready-made template
 
 ```php

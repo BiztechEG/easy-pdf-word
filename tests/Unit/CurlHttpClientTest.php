@@ -3,23 +3,14 @@
 namespace BiztechEG\EasyPdfWord\Tests\Unit;
 
 use BiztechEG\EasyPdfWord\Support\CurlHttpClient;
+use BiztechEG\EasyPdfWord\Tests\Concerns\BuiltInServer;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
 /** The curl client plain PHP uses for Gotenberg, against PHP's built-in server. */
 class CurlHttpClientTest extends TestCase
 {
-    /** @var resource|null */
-    private $server = null;
-
-    protected function tearDown(): void
-    {
-        if ($this->server) {
-            proc_terminate($this->server);
-        }
-
-        parent::tearDown();
-    }
+    use BuiltInServer;
 
     public function test_it_posts_fields_and_files_with_the_same_name(): void
     {
@@ -69,25 +60,5 @@ class CurlHttpClientTest extends TestCase
         $this->expectException(RuntimeException::class);
 
         (new CurlHttpClient)->postMultipart('file:///etc/passwd', [], [], 5);
-    }
-
-    private function server(): string
-    {
-        $socket = stream_socket_server('tcp://127.0.0.1:0');
-        $address = stream_socket_get_name($socket, false);
-        fclose($socket);
-
-        $router = __DIR__.'/../fixtures/server/router.php';
-        $this->server = proc_open(
-            [PHP_BINARY, '-d', 'enable_post_data_reading=0', '-S', $address, $router],
-            [1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']],
-            $pipes,
-        );
-
-        for ($i = 0; $i < 50 && ! @fsockopen('127.0.0.1', (int) substr(strrchr($address, ':'), 1)); $i++) {
-            usleep(100_000);
-        }
-
-        return $address;
     }
 }

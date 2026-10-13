@@ -103,13 +103,18 @@ class File
 
     /**
      * Send the file to the browser from plain PHP: as a download, or shown
-     * in the browser with $inline. Nothing may have been output before.
+     * in the browser with $inline. Output still in a buffer is dropped; once
+     * headers went out it is too late and this throws.
      */
     public function send(?string $filename = null, bool $inline = false): void
     {
         if (headers_sent($file, $line)) {
             throw new RuntimeException("Cannot send the file: output already started at {$file}:{$line}.");
         }
+
+        // Output still waiting in a buffer (a stray newline, a BOM, a notice)
+        // would go out before the file and cut off its end.
+        while (ob_get_level() > 0 && ob_get_length() > 0 && ob_end_clean());
 
         $content = $this->content();
         header('Content-Type: '.$this->mimeType());
@@ -141,7 +146,8 @@ class File
             $ascii = $filename;
         }
 
-        $fallback = preg_replace('/[^\x20-\x24\x26-\x7E]/', '_', $ascii) ?? '';
+        // One "_" per letter, not per byte, when nothing could spell it in Latin.
+        $fallback = preg_replace('/[^\x20-\x24\x26-\x7E]/u', '_', $ascii) ?? '';
 
         if (trim(pathinfo($fallback, PATHINFO_FILENAME), ' _-.') === '') {
             $fallback = 'document'.(pathinfo($filename, PATHINFO_EXTENSION) !== '' ? '.'.pathinfo($filename, PATHINFO_EXTENSION) : '');
@@ -152,8 +158,9 @@ class File
 
     protected function cleanFilename(string $filename): string
     {
-        // Slashes are not allowed in a file name.
-        $filename = str_replace(['/', '\\'], '-', $filename);
+        // Slashes are not allowed in a file name, and control characters
+        // (a NUL byte, a new line) would cut it short or break headers.
+        $filename = (string) preg_replace('/[\x00-\x1F\x7F]/', '', str_replace(['/', '\\'], '-', $filename));
         $extension = '.'.$this->extension();
 
         return $this->extension() === '' || str_ends_with(strtolower($filename), $extension) ? $filename : $filename.$extension;

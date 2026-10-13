@@ -20,7 +20,9 @@ use Closure;
  *   $docs->template('invoice', $data)->pdf()->save(__DIR__.'/invoice.pdf');
  *
  * The settings are those of config/easy-pdf-word.php; leave out what you do
- * not change.
+ * not change. "currencies" are the exception to per-factory settings: like
+ * Arabic::tafqeet(), they are shared by the whole PHP process, so a code
+ * defined by one factory is seen by every other one.
  */
 final class EasyPdfWord
 {

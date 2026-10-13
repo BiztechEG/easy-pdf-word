@@ -18,11 +18,11 @@ final class WordImage
         $bytes = match (true) {
             str_starts_with($source, 'data:') => base64_decode(substr($source, strpos($source, ',') + 1), true),
             // Fetched here rather than by PhpWord, so redirects are not
-            // followed (they could lead past the allowed hosts) and a slow
-            // server cannot hold the request.
+            // followed (they could lead past the allowed hosts), a slow
+            // server cannot hold the request and a huge file is cut off.
             preg_match('#^https?://#i', $source) === 1 => @file_get_contents($source, false, stream_context_create([
                 'http' => ['timeout' => 10, 'follow_location' => 0],
-            ])),
+            ]), 0, 10 * 1024 * 1024),
             default => null,
         };
 

@@ -41,7 +41,7 @@ class RuleValidator implements Validator
 
                     if (! $this->passes($rule, $parameters, $value, $exists, $data, $attribute, $names)) {
                         $label = str_contains((string) $pattern, '*') ? $attribute : self::label($attribute);
-                        $errors[$attribute][] = $this->message($rule, $parameters, $label, $names);
+                        $errors[$attribute][] = $this->message($rule, $parameters, $label, $names, $data, $attribute);
 
                         // Laravel stops checking a field once "required" and the like fail.
                         if (in_array($rule, self::IMPLICIT, true)) {
@@ -158,11 +158,12 @@ class RuleValidator implements Validator
             'boolean' => in_array($value, [true, false, 0, 1, '0', '1'], true),
             'array' => is_array($value),
             'date' => $this->isDate($value),
-            'date_format' => $this->matchesFormat($value, $parameters[0] ?? ''),
+            'date_format' => array_filter($parameters, fn (string $format) => $this->matchesFormat($value, $format)) !== [],
             'min' => $this->size($value, $names) >= (float) ($parameters[0] ?? 0),
             'max' => $this->size($value, $names) <= (float) ($parameters[0] ?? 0),
             'size' => $this->size($value, $names) == (float) ($parameters[0] ?? 0),
-            'in' => ! is_array($value) && in_array((string) (is_bool($value) ? (int) $value : $value), $parameters, true),
+            // As Laravel: the value as a string, so false is "" and matches no option.
+            'in' => ! is_array($value) && in_array((string) $value, $parameters, true),
             'gt' => $this->greaterThan($value, $parameters[0] ?? '', $data, $attribute, $names),
             'after_or_equal' => $this->afterOrEqual($value, $parameters[0] ?? '', $data, $attribute),
             'regex' => (is_string($value) || is_numeric($value)) && @preg_match($parameters[0] ?? '', (string) $value) > 0,
@@ -186,8 +187,9 @@ class RuleValidator implements Validator
         [$exists, $other] = $this->lookup($data, $this->sibling($parameters[0] ?? '', $attribute));
         $values = array_slice($parameters, 1);
 
+        // As Laravel: the rule does not apply when the other field is missing.
         if (! $exists || is_array($other)) {
-            return in_array('null', $values, true) && $other === null;
+            return false;
         }
 
         $other = match (true) {
@@ -268,6 +270,10 @@ class RuleValidator implements Validator
     /** As Laravel: the parameter as a date first, then as a field; a missing other date passes. */
     private function afterOrEqual(mixed $value, string $other, array $data, string $attribute): bool
     {
+        if (! is_string($value) && ! is_numeric($value) && ! $value instanceof DateTimeInterface) {
+            return false;
+        }
+
         $second = $this->timestamp($other) ?? $this->timestamp($this->lookup($data, $this->sibling($other, $attribute))[1]);
 
         return $this->timestamp($value) >= $second;
@@ -289,7 +295,7 @@ class RuleValidator implements Validator
     }
 
     /** Laravel's default English messages. */
-    private function message(string $rule, array $parameters, string $label, array $names): string
+    private function message(string $rule, array $parameters, string $label, array $names, array $data, string $attribute): string
     {
         // The wording follows the field's rules, not the value given.
         $kind = match (true) {
@@ -303,7 +309,7 @@ class RuleValidator implements Validator
         return match ($rule) {
             'required' => "{$field} is required.",
             'present' => "{$field} must be present.",
-            'required_if' => "{$field} is required when ".self::label($first).' is '.($parameters[1] ?? '').'.',
+            'required_if' => "{$field} is required when ".$this->other($first, $data, $attribute).'.',
             'string' => "{$field} must be a string.",
             'numeric' => "{$field} must be a number.",
             'integer' => "{$field} must be an integer.",
@@ -327,10 +333,36 @@ class RuleValidator implements Validator
                 default => "{$field} must be {$first} characters.",
             },
             'in' => "The selected {$label} is invalid.",
-            'gt' => "{$field} must be greater than {$first}.",
+            'gt' => match ($kind) {
+                'numeric' => "{$field} must be greater than {$this->gtValue($first, $data, $attribute, $names)}.",
+                'array' => "{$field} must have more than {$this->gtValue($first, $data, $attribute, $names)} items.",
+                default => "{$field} must be greater than {$this->gtValue($first, $data, $attribute, $names)} characters.",
+            },
             'after_or_equal' => "{$field} must be a date after or equal to {$first}.",
             'regex' => "{$field} format is invalid.",
         };
+    }
+
+    /** "method is transfer" for required_if: the other field and the value it has, as Laravel shows them. */
+    private function other(string $field, array $data, string $attribute): string
+    {
+        $path = $this->sibling($field, $attribute);
+        $value = $this->lookup($data, $path)[1];
+        $shown = match (true) {
+            is_bool($value) => $value ? 'true' : 'false',
+            $value === null => 'empty',
+            default => (string) $value,
+        };
+
+        return (str_contains($field, '*') ? $path : self::label($path)).' is '.$shown;
+    }
+
+    /** The number gt compares with: the other field's size when it names one, else the parameter. */
+    private function gtValue(string $other, array $data, string $attribute, array $names): string
+    {
+        [$exists, $compared] = $this->lookup($data, $this->sibling($other, $attribute));
+
+        return $exists ? (string) $this->size($compared, $names) : $other;
     }
 
     /** A field name as Laravel shows it: "due_date" as "due date"; fields from a "*" rule stay as they are. */

@@ -49,6 +49,16 @@ class OutputFileTest extends TestCase
         $this->assertSame('bytes', ob_get_clean());
     }
 
+    public function test_send_drops_output_waiting_in_a_buffer(): void
+    {
+        ob_start();
+        ob_start();
+        echo "\n";
+        File::pdf(fn () => ['bytes', 'mpdf'])->send('x.pdf');
+
+        $this->assertSame('bytes', ob_get_clean());
+    }
+
     public function test_download_name_has_a_latin_fallback(): void
     {
         $file = new class(fn () => ['bytes', 'mpdf'], 'document.pdf', 'application/pdf', 'pdf') extends File
@@ -77,7 +87,7 @@ class OutputFileTest extends TestCase
         }
 
         $pdf = fn (string $name) => File::pdf(fn () => [$name, 'mpdf'], $name);
-        $bytes = File::archive([$pdf('invoice'), $pdf('Invoice.pdf'), '../../evil' => $pdf('x')]);
+        $bytes = File::archive([$pdf('invoice'), $pdf('Invoice.pdf'), '../../evil' => $pdf('x'), "a\0b" => $pdf('y')]);
         $path = tempnam(sys_get_temp_dir(), 'zip-test');
         file_put_contents($path, $bytes);
         $zip = new ZipArchive;
@@ -91,6 +101,6 @@ class OutputFileTest extends TestCase
         $zip->close();
         unlink($path);
 
-        $this->assertSame(['invoice.pdf', 'Invoice (2).pdf', '-..-evil.pdf'], $names);
+        $this->assertSame(['invoice.pdf', 'Invoice (2).pdf', '-..-evil.pdf', 'ab.pdf'], $names);
     }
 }

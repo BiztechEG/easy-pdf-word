@@ -75,7 +75,7 @@ class CoreSupportTest extends TestCase
 
     public function test_month_and_day_names_match_carbon(): void
     {
-        foreach (['ar', 'ar_EG', 'ar_SA', 'en', 'en_GB', 'fr', 'tr'] as $locale) {
+        foreach (['ar', 'ar_EG', 'ar_SA', 'ar_SY', 'ar_LB', 'ar_IQ', 'en', 'en_GB', 'fr', 'tr'] as $locale) {
             if (! in_array($locale, ['ar', 'ar_EG', 'ar_SA', 'en', 'en_GB'], true) && ! extension_loaded('intl')) {
                 continue;
             }

@@ -21,11 +21,15 @@ use BiztechEG\EasyPdfWord\Word\WordRenderer;
 use BadMethodCallException;
 use InvalidArgumentException;
 use LogicException;
+use RuntimeException;
 
 /**
  * A document being configured, without a framework. Every setter returns
  * $this; ->pdf() and ->word() turn it into a file. In Laravel the Doc
  * facade hands out PendingDocument, which adds queues, fakes and responses.
+ *
+ * The protected properties and methods are the Laravel package's way in and
+ * are kept stable within a major version, as the public ones are.
  *
  *   $docs = EasyPdfWord::create(['locale' => 'ar']);
  *   $docs->template('invoice', $data)->pdf()->save(__DIR__.'/invoice.pdf');
@@ -493,6 +497,11 @@ class Document
         if ($this->protection !== null) {
             throw new LogicException('Word files cannot take a password; ->password() works for PDF files only.');
         }
+
+        // A .docx is a ZIP file; without the extension PhpWord fails later with a bare "Class not found".
+        if (! class_exists(\ZipArchive::class)) {
+            throw new RuntimeException('Word files need the PHP zip extension (ext-zip).');
+        }
     }
 
     /** @return array{0: string, 1: string} [bytes, engine name] */
@@ -538,6 +547,7 @@ class Document
             imagePaths: $this->config('images.paths'),
             remoteImages: $this->remoteImages(),
             timezone: $this->services->timezone(),
+            warn: $this->services->pdf->warn(...),
         );
     }
 
