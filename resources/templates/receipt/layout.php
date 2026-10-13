@@ -47,11 +47,13 @@ return function (DocumentBuilder $voucher, array $data, DocContext $doc): void {
 
     // Who, how much in words, what for, how.
     $label = fn (string $key) => ['text' => $doc->t($key), 'bold' => true];
-    $rows = [
+    $words = $doc->inWords($data['amount'], $data['currency']);
+    // Without ext-intl only Arabic has words, so the row is left out rather than shown empty.
+    $rows = array_values(array_filter([
         [$label('party.'.$type), $data['party']],
-        [$label('amount_in_words'), $doc->inWords($data['amount'], $data['currency'])],
+        $words !== '' ? [$label('amount_in_words'), $words] : null,
         [$label('for'), $data['for']],
-    ];
+    ]));
 
     $method = $doc->t('methods.'.$data['method']);
 
