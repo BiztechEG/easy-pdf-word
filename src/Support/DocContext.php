@@ -5,6 +5,7 @@ namespace BiztechEG\EasyPdfWord\Support;
 use BiztechEG\EasyPdfWord\Arabic\Arabic;
 use BiztechEG\EasyPdfWord\Arabic\Numerals;
 use BiztechEG\EasyPdfWord\Arabic\Tafqeet;
+use Closure;
 
 /**
  * Passed to every document view as $doc: direction, fonts, theme and
@@ -25,6 +26,7 @@ class DocContext
         private readonly ?array $imagePaths = null,
         private readonly bool|array $remoteImages = false,
         private readonly ?string $timezone = null,
+        private readonly ?Closure $warn = null,
     ) {}
 
     public function isRtl(): bool
@@ -290,7 +292,11 @@ class DocContext
         // lead past the allowed hosts) and an SVG is checked before an engine
         // reads the files and URLs it points to.
         if (preg_match('#^https?://#i', $source)) {
-            return $this->allowsRemote($source) ? $this->fetchImage($source) : null;
+            if (! $this->allowsRemote($source)) {
+                return $this->leftOut($source, 'its host is not allowed in the images.remote setting');
+            }
+
+            return $this->fetchImage($source);
         }
 
         // Other schemes (phar://, ftp://, php://) and network shares are never read.
@@ -300,7 +306,11 @@ class DocContext
 
         $path = realpath($source);
 
-        if ($path === false || ! is_file($path) || ! $this->isAllowedPath($path) || ! ($mime = $this->imageMime($path))) {
+        if ($path !== false && is_file($path) && ! $this->isAllowedPath($path)) {
+            return $this->leftOut($source, 'it is outside the folders in the images.paths setting');
+        }
+
+        if ($path === false || ! is_file($path) || ! ($mime = $this->imageMime($path))) {
             return null;
         }
 
@@ -311,6 +321,18 @@ class DocContext
         }
 
         return 'data:'.$mime.';base64,'.base64_encode($content);
+    }
+
+    /** Null, after telling the developer why an image they may have meant to show was left out. */
+    private function leftOut(string $source, string $reason): null
+    {
+        if ($this->warn !== null) {
+            // The source can come from user data: no line breaks, and kept short.
+            $source = mb_strimwidth((string) preg_replace('/[\x00-\x1F\x7F]/', '', $source), 0, 200, '...', 'UTF-8');
+            ($this->warn)("easy-pdf-word: image [{$source}] was left out: {$reason}.");
+        }
+
+        return null;
     }
 
     /** An allowed image URL as a data URI: no redirects, 10 seconds, 10 MB at most. */

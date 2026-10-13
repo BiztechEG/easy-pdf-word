@@ -2,6 +2,7 @@
 
 namespace BiztechEG\EasyPdfWord\Tests\Unit;
 
+use BiztechEG\EasyPdfWord\EasyPdfWord;
 use BiztechEG\EasyPdfWord\Support\DocContext;
 use BiztechEG\EasyPdfWord\Tests\Concerns\BuiltInServer;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -70,8 +71,43 @@ class ImageSourceTest extends TestCase
         $this->assertNull($this->context(['cdn.example.com'])->image('http://127.0.0.1/logo.png'));
     }
 
-    private function context(bool|array $remoteImages = false): DocContext
+    public function test_the_developer_is_told_when_an_image_is_left_out(): void
     {
-        return new DocContext('en', 'ltr', 'cairo', [], 'latin', 'mpdf', imagePaths: [], remoteImages: $remoteImages);
+        $warnings = [];
+        $warn = function (string $message) use (&$warnings) {
+            $warnings[] = $message;
+        };
+
+        $this->assertNull($this->context(warn: $warn)->image(__DIR__."/../fixtures/missing\n.png"));
+        $this->assertNull($this->context(warn: $warn)->image(__FILE__));
+        $this->assertNull($this->context(warn: $warn)->image('https://example.com/logo.png'));
+
+        $this->assertSame([
+            'easy-pdf-word: image ['.__FILE__.'] was left out: it is outside the folders in the images.paths setting.',
+            'easy-pdf-word: image [https://example.com/logo.png] was left out: its host is not allowed in the images.remote setting.',
+        ], $warnings);
+    }
+
+    public function test_a_local_logo_outside_the_allowed_folders_is_reported_from_plain_php(): void
+    {
+        $warnings = [];
+        $logo = sys_get_temp_dir().'/easy-pdf-word-logo.png';
+        file_put_contents($logo, base64_decode(self::PNG));
+
+        try {
+            $docs = EasyPdfWord::create(['theme' => ['logo' => $logo]], ['warn' => function (string $message) use (&$warnings) {
+                $warnings[] = $message;
+            }]);
+            $docs->template('letter', $docs->templates()->get('letter')->sample())->toHtml();
+        } finally {
+            unlink($logo);
+        }
+
+        $this->assertSame(["easy-pdf-word: image [{$logo}] was left out: it is outside the folders in the images.paths setting."], $warnings);
+    }
+
+    private function context(bool|array $remoteImages = false, ?\Closure $warn = null): DocContext
+    {
+        return new DocContext('en', 'ltr', 'cairo', [], 'latin', 'mpdf', imagePaths: [], remoteImages: $remoteImages, warn: $warn);
     }
 }

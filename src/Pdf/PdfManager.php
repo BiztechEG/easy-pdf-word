@@ -46,7 +46,7 @@ class PdfManager
     /**
      * @param  array|Closure(): array  $config  the package settings (config/easy-pdf-word.php); a closure is read on every use, so later changes apply
      * @param  FontRegistry|Closure(): FontRegistry|null  $fonts
-     * @param  Closure(string): void|null  $warn  told when an engine fails and the fallback renders; error_log() by default
+     * @param  Closure(string): void|null  $warn  told when an engine fails and the fallback renders, or an image is left out; error_log() by default
      * @param  mixed  $creatorArgument  what engines added with extend() receive (the app, in Laravel)
      */
     public function __construct(
@@ -180,6 +180,12 @@ class PdfManager
         ($this->warn)("easy-pdf-word: [{$name}] failed, falling back to [{$fallback}]: ".self::limit($e->getMessage(), 300));
 
         return [$this->protect($engine->render($htmlFor ? $htmlFor($engine) : $html, $options), $engine, $options), $fallback];
+    }
+
+    /** Tell the developer about something that went wrong without stopping the document. */
+    public function warn(string $message): void
+    {
+        ($this->warn)($message);
     }
 
     /** mPDF encrypts as it renders; other engines' files get a password afterwards. */

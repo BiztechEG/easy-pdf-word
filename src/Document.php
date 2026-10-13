@@ -544,6 +544,7 @@ class Document
             imagePaths: $this->config('images.paths'),
             remoteImages: $this->remoteImages(),
             timezone: $this->services->timezone(),
+            warn: $this->services->pdf->warn(...),
         );
     }
 
