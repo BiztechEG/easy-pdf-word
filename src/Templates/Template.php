@@ -15,7 +15,8 @@ use RuntimeException;
  *   word.docx         optional Word file with ${placeholders}, designed in Word (wins over word.php)
  *   footer.html.php   optional page footer, may use {page} and {pages} (or footer.blade.php)
  *   header.html.php   optional page header, the same way (or header.blade.php)
- *   lang/{locale}.php optional labels, read in views with $doc->t('key')
+ *   lang/{locale}.json optional labels, read in views with $doc->t('key') (or lang/{locale}.php,
+ *                     whose keys win over the .json file's)
  */
 class Template
 {
@@ -188,8 +189,13 @@ class Template
         }
 
         if (! array_key_exists($language, $this->translations)) {
-            $file = $this->path."/lang/{$language}.php";
-            $this->translations[$language] = is_file($file) ? (array) require $file : [];
+            $json = $this->path."/lang/{$language}.json";
+            $php = $this->path."/lang/{$language}.php";
+
+            $this->translations[$language] = array_replace_recursive(
+                is_file($json) ? (array) json_decode((string) file_get_contents($json), true, 64, JSON_THROW_ON_ERROR) : [],
+                is_file($php) ? (array) require $php : [],
+            );
         }
 
         return $this->translations[$language];
