@@ -11,7 +11,7 @@ use BiztechEG\EasyPdfWord\Support\Currency;
 return [
     'title' => 'Price quotation',
     'description' => 'Price quotation with items, optional VAT, validity date, terms and signature.',
-    'locales' => ['ar', 'en'],
+    'locales' => ['ar', 'en', 'tr'],
     'paper' => 'A4',
 
     'fields' => [

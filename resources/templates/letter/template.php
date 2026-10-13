@@ -10,7 +10,7 @@
 return [
     'title' => 'Official letter',
     'description' => 'Official letter with letterhead, reference number, Hijri date, subject, signature and stamp.',
-    'locales' => ['ar', 'en'],
+    'locales' => ['ar', 'en', 'tr'],
     'paper' => 'A4',
     'margins' => [18, 20, 20, 20],
 

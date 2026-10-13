@@ -18,7 +18,7 @@
 return [
     'title' => 'Certificate',
     'description' => 'Landscape certificate of completion, attendance, participation or appreciation with signatures and a verification QR.',
-    'locales' => ['ar', 'en'],
+    'locales' => ['ar', 'en', 'tr'],
     'paper' => 'A4',
     'orientation' => 'landscape',
     'margins' => [10, 10, 10, 10],

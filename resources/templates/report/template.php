@@ -17,7 +17,7 @@ use BiztechEG\EasyPdfWord\Support\DocContext;
 return [
     'title' => 'Table report',
     'description' => 'Data table report with repeated header, totals row, summary cards and page numbers.',
-    'locales' => ['ar', 'en'],
+    'locales' => ['ar', 'en', 'tr'],
     'paper' => 'A4',
     'margins' => [15, 12, 16, 12],
 

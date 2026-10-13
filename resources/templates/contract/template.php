@@ -14,7 +14,7 @@
 return [
     'title' => 'Contract',
     'description' => 'Contract between two or more parties with a preamble, numbered clauses, copies, signatures and witnesses.',
-    'locales' => ['ar', 'en'],
+    'locales' => ['ar', 'en', 'tr'],
     'paper' => 'A4',
     'margins' => [18, 20, 28, 20],
 

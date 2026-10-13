@@ -15,7 +15,7 @@ use BiztechEG\EasyPdfWord\Zatca\ZatcaQr;
 return [
     'title' => 'Tax invoice',
     'description' => 'Tax invoice with items, VAT, amount in words and optional ZATCA or e-invoice QR.',
-    'locales' => ['ar', 'en'],
+    'locales' => ['ar', 'en', 'tr'],
     'paper' => 'A4',
 
     'fields' => [

@@ -13,7 +13,7 @@ use BiztechEG\EasyPdfWord\Support\Currency;
 return [
     'title' => 'Receipt voucher',
     'description' => 'Receipt or payment voucher with amount in words, payment method and signatures.',
-    'locales' => ['ar', 'en'],
+    'locales' => ['ar', 'en', 'tr'],
     'paper' => 'A5',
     'orientation' => 'landscape',
     'margins' => [10, 12, 12, 12],

@@ -26,7 +26,7 @@ use BiztechEG\EasyPdfWord\Support\Currency;
 return [
     'title' => 'Egyptian e-invoice',
     'description' => 'Printed copy of an Egyptian Tax Authority e-invoice, credit or debit note, with item codes, ETA tax types and portal QR.',
-    'locales' => ['ar', 'en'],
+    'locales' => ['ar', 'en', 'tr'],
     'paper' => 'A4',
     'margins' => [12, 12, 15, 12],
 
