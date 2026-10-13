@@ -1,0 +1,33 @@
+{
+    "title": "Satın Alma Siparişi",
+    "number": "Sipariş No.",
+    "date": "Tarih",
+    "delivery_date": "Teslim tarihi",
+    "reference": "Teklif referansı",
+    "supplier": "Tedarikçi",
+    "deliver_to": "Teslim yeri",
+    "contact": "İlgili kişi",
+    "tax_number": "Vergi No.",
+    "intro": "Aşağıdaki ürünlerin belirtilen koşullarla tedarik edilmesini rica ederiz:",
+    "code": "Kod",
+    "description": "Ürün",
+    "unit": "Birim",
+    "quantity": "Miktar",
+    "unit_price": "Birim fiyat",
+    "discount": "İndirim",
+    "line_total": "Tutar",
+    "subtotal": "Ara toplam",
+    "net": "İndirim sonrası net",
+    "vat": "KDV (%:rate)",
+    "total": "Sipariş toplamı",
+    "payment_terms": "Ödeme koşulları",
+    "terms": "Koşullar",
+    "notes": "Notlar",
+    "signatures": {
+        "prepared_by": "Hazırlayan",
+        "approved_by": "Onaylayan",
+        "supplier": "Tedarikçi onayı"
+    },
+    "page": "Sayfa",
+    "of": "/"
+}
