@@ -1,0 +1,31 @@
+{
+    "title": {
+        "credit": "Alacak Dekontu",
+        "debit": "Borç Dekontu"
+    },
+    "number": "Dekont No.",
+    "date": "Düzenleme tarihi",
+    "original_invoice": "İlgili fatura",
+    "invoice_number": "Fatura No.",
+    "invoice_date": "Fatura tarihi",
+    "reason": "Gerekçe",
+    "buyer": "Müşteri",
+    "tax_number": "Vergi No.",
+    "description": "Açıklama",
+    "quantity": "Miktar",
+    "unit_price": "Birim fiyat",
+    "discount": "İndirim",
+    "line_total": "Tutar",
+    "subtotal": "Ara toplam",
+    "taxable": "İndirim sonrası net",
+    "vat": "KDV (%:rate)",
+    "total": "Dekont toplamı",
+    "effect": {
+        "credit": "Bu tutar firmamızdaki hesabınıza alacak olarak kaydedilmiştir.",
+        "debit": "Bu tutar firmamızdaki hesabınıza borç olarak kaydedilmiştir."
+    },
+    "verify": "Bu dekontu doğrulamak için kodu tarayın",
+    "notes": "Notlar",
+    "page": "Sayfa",
+    "of": "/"
+}
