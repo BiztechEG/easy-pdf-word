@@ -158,11 +158,12 @@ class RuleValidator implements Validator
             'boolean' => in_array($value, [true, false, 0, 1, '0', '1'], true),
             'array' => is_array($value),
             'date' => $this->isDate($value),
-            'date_format' => $this->matchesFormat($value, $parameters[0] ?? ''),
+            'date_format' => array_filter($parameters, fn (string $format) => $this->matchesFormat($value, $format)) !== [],
             'min' => $this->size($value, $names) >= (float) ($parameters[0] ?? 0),
             'max' => $this->size($value, $names) <= (float) ($parameters[0] ?? 0),
             'size' => $this->size($value, $names) == (float) ($parameters[0] ?? 0),
-            'in' => ! is_array($value) && in_array((string) (is_bool($value) ? (int) $value : $value), $parameters, true),
+            // As Laravel: the value as a string, so false is "" and matches no option.
+            'in' => ! is_array($value) && in_array((string) $value, $parameters, true),
             'gt' => $this->greaterThan($value, $parameters[0] ?? '', $data, $attribute, $names),
             'after_or_equal' => $this->afterOrEqual($value, $parameters[0] ?? '', $data, $attribute),
             'regex' => (is_string($value) || is_numeric($value)) && @preg_match($parameters[0] ?? '', (string) $value) > 0,
@@ -186,8 +187,9 @@ class RuleValidator implements Validator
         [$exists, $other] = $this->lookup($data, $this->sibling($parameters[0] ?? '', $attribute));
         $values = array_slice($parameters, 1);
 
+        // As Laravel: the rule does not apply when the other field is missing.
         if (! $exists || is_array($other)) {
-            return in_array('null', $values, true) && $other === null;
+            return false;
         }
 
         $other = match (true) {
@@ -268,6 +270,10 @@ class RuleValidator implements Validator
     /** As Laravel: the parameter as a date first, then as a field; a missing other date passes. */
     private function afterOrEqual(mixed $value, string $other, array $data, string $attribute): bool
     {
+        if (! is_string($value) && ! is_numeric($value) && ! $value instanceof DateTimeInterface) {
+            return false;
+        }
+
         $second = $this->timestamp($other) ?? $this->timestamp($this->lookup($data, $this->sibling($other, $attribute))[1]);
 
         return $this->timestamp($value) >= $second;
