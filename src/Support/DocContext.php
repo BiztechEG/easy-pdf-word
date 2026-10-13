@@ -221,12 +221,13 @@ class DocContext
 
     /**
      * An amount in words in the document's language: Arabic tafqeet, or the
-     * intl spell-out for other languages ("one thousand two hundred EGP").
-     * Empty when neither is available.
+     * intl spell-out for other languages ("one thousand two hundred EGP"),
+     * worded by "amount_in_words" in the language file ("Yalnız bin iki yüz
+     * Türk lirası"). Empty when neither is available.
      */
     public function inWords(int|float|string $amount, string $currency, bool $only = true): string
     {
-        $language = strtolower(preg_split('/[-_]/', $this->locale)[0]);
+        $language = Locale::language($this->locale) ?? 'en';
 
         if ($language === 'ar') {
             return $this->tafqeet($amount, $currency, $only);
@@ -245,7 +246,14 @@ class DocContext
             $words = trim(str_replace($formatter->format(1), '', $formatter->format(-1))).' '.$words;
         }
 
-        return trim($words.' '.strtoupper($currency).($fraction > 0 ? ' and '.$fraction.'/'.$per : '').($only ? ' only' : ''));
+        $code = strtoupper($currency);
+        $text = strtr($this->language('amount_in_words.amount'), [':words' => $words, ':currency' => $this->language('currency_names.'.$code) ?? $code]);
+
+        if ($fraction > 0) {
+            $text = strtr($this->language('amount_in_words.fraction'), [':amount' => $text, ':fraction' => $fraction, ':per' => $per]);
+        }
+
+        return trim($only ? strtr($this->language('amount_in_words.only'), [':amount' => $text]) : $text);
     }
 
     /** Decimal places of the currency's amounts: 3 for KWD, 2 for most. */
@@ -269,7 +277,10 @@ class DocContext
         return [(int) $value, (int) round(abs($value - (int) $value) * $per), $per];
     }
 
-    /** A currency's short label from the template's "currencies" labels, or its code. */
+    /**
+     * A currency's short label: from the template's "currencies" labels,
+     * else the language file's ("ج.م", "TL"), else its code.
+     */
     public function currency(string $code): string
     {
         $code = strtoupper($code);
@@ -279,13 +290,8 @@ class DocContext
             return $label;
         }
 
-        return $this->isRtl() ? (self::ARABIC_CURRENCIES[$code] ?? $code) : $code;
+        return (string) ($this->language('currencies.'.$code) ?? $code);
     }
-
-    private const ARABIC_CURRENCIES = [
-        'EGP' => 'ج.م', 'SAR' => 'ر.س', 'AED' => 'د.إ', 'KWD' => 'د.ك', 'QAR' => 'ر.ق',
-        'BHD' => 'د.ب', 'OMR' => 'ر.ع', 'JOD' => 'د.أ', 'USD' => 'دولار', 'EUR' => 'يورو',
-    ];
 
     /** Hijri dates need the intl extension; templates skip them without it. */
     public function hasHijri(): bool
