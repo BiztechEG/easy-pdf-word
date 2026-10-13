@@ -104,17 +104,40 @@ $docs->html('<h1>مرحباً</h1>')->locale('ar')->pdf()->save(__DIR__.'/hello.
 $docs->view('contracts.show', ['contract' => $contract])->pdf();
 ```
 
-Views are plain PHP files. They get your data as variables and `$doc`, the document helpers: `$doc->e()` escapes a value, `$doc->money()`, `$doc->tafqeet()`, `$doc->hijri()` and `$doc->ltr()` format it for the document's language.
+Views are plain PHP files. They get your data as variables and `$doc`, the document helpers: `$doc->e()` escapes a value, `$doc->money()`, `$doc->date()`, `$doc->inWords()`, `$doc->hijri()` and `$doc->ltr()` format it for the document's language.
 
 ### Your own templates
 
-A template is a folder with `template.php` (fields, defaults, sample data), a PDF page `pdf.html.php` or a code layout `layout.php`, optional `word.php` or `word.docx`, `footer.html.php` and `lang/*.php` labels. Point `templates.paths` at your folders:
+A template is a folder with `template.php` (fields, defaults, sample data), a PDF page `pdf.html.php` or a code layout `layout.php`, optional `word.php` or `word.docx`, `footer.html.php` and `lang/*.json` labels (or `lang/*.php`). Point `templates.paths` at your folders:
 
 ```php
 $docs = EasyPdfWord::create(['templates' => ['paths' => [__DIR__.'/doc-templates']]]);
 ```
 
 The bundled templates in [resources/templates](resources/templates) are complete examples, and the [custom templates guide](https://easypdf.biztech-eg.com/guide/custom-templates) explains every file.
+
+### Languages
+
+The bundled templates come in Arabic, English and Turkish:
+
+```php
+$docs->template('invoice', $data)->locale('tr')->pdf();   // Fatura, 08.10.2026, 1.250,50, KDV (%20)
+```
+
+What the library knows about a language lives in JSON files, so other versions of the library can read the same files:
+
+- [resources/lang](resources/lang)`/{language}.json`: month and day names, date and number formats, currency labels and how amounts are written in words ("Yalnız bin iki yüz Türk Lirası").
+- `resources/templates/{template}/lang/{language}.json`: each template's labels.
+
+To add a language, add both: a language file in a folder of yours, and a `lang/{language}.json` in your copy of each template you use.
+
+```php
+use BiztechEG\EasyPdfWord\Support\Language;
+
+Language::addPath(__DIR__.'/lang');   // lang/fr.json; keys left out come from English
+```
+
+Amounts in words in languages other than Arabic need ext-intl. The Cairo and Noto Naskh fonts have the Turkish letters; Tajawal does not.
 
 ### Arabic helpers
 

@@ -4,6 +4,24 @@ All notable changes to `biztecheg/easy-pdf-word` are documented here. The format
 
 ## [Unreleased]
 
+### Added
+
+- Turkish: the twelve bundled templates in Turkish (`->locale('tr')`), with Turkish dates (08.10.2026), numbers (1.250,50), month and day names, and amounts in words ("Yalnız bin iki yüz elli Türk Lirası ve 50/100").
+- Language files in `resources/lang/{language}.json` (month and day names, date and number formats, list separator, currency labels and the wording of amounts in words), read by `Support\Language`. `Language::addPath()` adds a folder with more languages or keys that replace the bundled ones.
+- Template labels can be `lang/{locale}.json` files; a `lang/{locale}.php` file next to one wins over its keys.
+- `$doc->date()` writes a date in the language's format, `$doc->language()` reads a key of the language file, `$doc->join()` joins values with the language's list separator and `$doc->ucfirst()` capitalises any first letter (Turkish "i" as "İ").
+
+### Changed
+
+- The bundled templates' labels moved from `lang/*.php` to `lang/*.json`. Copies of the templates with `.php` labels keep working.
+- `number()`, `numberText()` and `rate()` use the language's decimal and thousands separators; Arabic and English are unchanged.
+- Currency labels (ج.م, ر.س) follow the document's language instead of its direction, so a Persian or Hebrew document no longer gets the Arabic labels.
+
+### Fixed
+
+- Lists in Word placeholders were joined with the Arabic comma in every language; they use the language's separator.
+- Contract labels capitalised with `ucfirst()` left a non-ASCII first letter small.
+
 ## [1.1.0] - 2026-10-13
 
 ### Security
