@@ -4,6 +4,8 @@ All notable changes to `biztecheg/easy-pdf-word` are documented here. The format
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-13
+
 ### Security
 
 - An SVG image inside a data URI that claimed another type (`data:image/png;base64,...`) skipped the SVG check, and mPDF then fetched the URLs and read the local images it pointed to, outside `images.paths` and `images.remote`. Data URIs are now checked by their content and rebuilt with their real type.
