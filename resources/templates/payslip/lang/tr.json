@@ -1,0 +1,43 @@
+{
+    "title": "Maaş Bordrosu",
+    "period": ":month dönemi",
+    "number": "Bordro No.",
+    "employee": {
+        "name": "Çalışan",
+        "code": "Sicil No.",
+        "job_title": "Unvan",
+        "department": "Departman",
+        "national_id": "Kimlik No.",
+        "hire_date": "İşe giriş tarihi",
+        "bank_account": "Banka hesabı"
+    },
+    "earnings": "Kazançlar",
+    "deductions": "Kesintiler",
+    "amount": "Tutar",
+    "total_earnings": "Toplam kazanç",
+    "total_deductions": "Toplam kesinti",
+    "net": "Net ödenen",
+    "attendance": {
+        "working_days": "Çalışma günü",
+        "present_days": "Çalışılan gün",
+        "absent_days": "Devamsızlık günü",
+        "leave_days": "İzin günü",
+        "overtime_hours": "Fazla mesai saati"
+    },
+    "payment_method": "Ödeme şekli",
+    "payment_date": "Ödeme tarihi",
+    "methods": {
+        "bank": "Banka havalesi",
+        "cash": "Nakit",
+        "cheque": "Çek"
+    },
+    "notes": "Notlar",
+    "signatures": {
+        "accountant": "Muhasebe",
+        "hr": "İnsan kaynakları",
+        "employee": "Çalışan imzası"
+    },
+    "confidential": "Gizli",
+    "page": "Sayfa",
+    "of": "/"
+}
