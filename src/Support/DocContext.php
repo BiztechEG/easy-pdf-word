@@ -279,10 +279,11 @@ class DocContext
             return null;
         }
 
+        // The declared type is not trusted: mPDF sniffs the bytes and would
+        // follow the references inside an SVG labelled as a PNG. So the
+        // content is checked and the URI rebuilt with its real type.
         if (str_starts_with($source, 'data:')) {
-            $svg = stripos($source, 'data:image/svg') === 0;
-
-            return str_starts_with($source, 'data:image/') && (! $svg || self::isSafeSvg(self::dataUriContent($source))) ? $source : null;
+            return str_starts_with(strtolower($source), 'data:image/') ? self::dataUri(self::dataUriContent($source)) : null;
         }
 
         if (preg_match('#^https?://#i', $source)) {
@@ -322,13 +323,19 @@ class DocContext
             'http' => ['timeout' => 10, 'follow_location' => 0, 'max_redirects' => 0],
         ]), 0, 10 * 1024 * 1024);
 
-        if (! is_string($content) || $content === '') {
+        return is_string($content) ? self::dataUri($content) : null;
+    }
+
+    /** Image bytes as a data URI of their real type, or null when they are not a safe image. */
+    private static function dataUri(string $content): ?string
+    {
+        if ($content === '') {
             return null;
         }
 
         $mime = (@getimagesizefromstring($content) ?: [])['mime'] ?? null;
 
-        if ($mime === null && str_contains(substr($content, 0, 1024), '<svg') && self::isSafeSvg($content)) {
+        if ($mime === null && preg_match('/<svg[\s>]/i', substr($content, 0, 1024)) && self::isSafeSvg($content)) {
             $mime = 'image/svg+xml';
         }
 
