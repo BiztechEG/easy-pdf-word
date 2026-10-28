@@ -19,6 +19,7 @@ class PdfOptions
      * @param  float|null  $headerDistance  mm from the top of the page to the header; null for the engine's default
      * @param  float|null  $footerDistance  mm from the bottom of the page to the footer
      * @param  bool  $fitHeaders  the margins are a minimum: a taller header or footer pushes the body (mPDF)
+     * @param  array{src: string, opacity: float, width: float}|null  $watermarkImage  an image (data URI) across every page, width in mm
      */
     public function __construct(
         public string|array $paper = 'A4',
@@ -39,6 +40,7 @@ class PdfOptions
         public ?float $headerDistance = null,
         public ?float $footerDistance = null,
         public bool $fitHeaders = false,
+        public ?array $watermarkImage = null,
     ) {}
 
     /** Whether the first page has its own header or footer. */
