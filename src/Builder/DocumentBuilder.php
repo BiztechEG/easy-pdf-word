@@ -32,7 +32,7 @@ class DocumentBuilder
 {
     private const ROW_OPTIONS = ['style', 'total', 'keep_with_next'];
 
-    private const ROW_STYLE = ['bold', 'italic', 'size', 'color', 'background', 'align', 'border'];
+    private const ROW_STYLE = ['bold', 'italic', 'size', 'color', 'background', 'align', 'border', 'padding', 'valign'];
 
     /** @var array<int, array> */
     private array $blocks = [];
@@ -67,8 +67,10 @@ class DocumentBuilder
      * @param  array<int, array>  $rows  rows of cells, or rows from row()
      * @param  array  $options  columns (percent widths, or ['width' => 30, 'align' => 'end']),
      *                          header (first row is a header), header_background, header_color,
-     *                          borders (bool), border_color, striped (#hex), footer (last row bold),
-     *                          font_size (pt)
+     *                          borders ('rows', 'grid' or 'none'; true is 'rows', false 'none'),
+     *                          border_color, border_width (pt), striped (#hex), footer (last row bold),
+     *                          font_size (pt), padding (mm), valign (top, middle, bottom),
+     *                          keep_together (the table stays on one page)
      */
     public function table(array $rows, array $options = []): static
     {
@@ -144,6 +146,75 @@ class DocumentBuilder
             'total' => ! empty($row['total']),
             'keep_with_next' => ! empty($row['keep_with_next']),
         ]];
+    }
+
+    /**
+     * The cells of a table placed on its grid, rows read with rowParts(). Each
+     * cell gets its first column, and a cell with a rowspan leaves a
+     * continuation cell at its columns in the rows below, so rows are written
+     * the HTML way: without the cells a rowspan covers.
+     *
+     * @internal
+     *
+     * @param  array<int, array<int, mixed>>  $rows  the cells of each row
+     * @return array<int, list<array{cell: array, col: int, span: int, rowspan: int, continue: bool}>>
+     */
+    public static function grid(array $rows): array
+    {
+        $rows = array_values($rows);
+        $pending = [];
+        $grid = [];
+
+        foreach ($rows as $r => $cells) {
+            $col = 0;
+            $placed = [];
+            $below = $pending[$r] ?? [];
+            ksort($below);
+
+            foreach ($cells as $cell) {
+                // Columns taken by a rowspan from above come first.
+                while (isset($below[$col])) {
+                    $placed[] = $below[$col];
+                    unset($below[$col]);
+                    $col += $placed[array_key_last($placed)]['span'];
+                }
+
+                $cell = is_array($cell) ? $cell : ['text' => (string) $cell];
+                $span = max(1, (int) ($cell['colspan'] ?? 1));
+                $rowspan = max(1, min((int) ($cell['rowspan'] ?? 1), count($rows) - $r));
+                $placed[] = ['cell' => $cell, 'col' => $col, 'span' => $span, 'rowspan' => $rowspan, 'continue' => false];
+
+                for ($k = 1; $k < $rowspan; $k++) {
+                    $pending[$r + $k][$col] = ['cell' => $cell, 'col' => $col, 'span' => $span, 'rowspan' => 1, 'continue' => true];
+                }
+
+                $col += $span;
+            }
+
+            // Continuations after the row's last cell.
+            foreach ($below as $continuation) {
+                $placed[] = $continuation;
+            }
+
+            $grid[$r] = $placed;
+        }
+
+        return $grid;
+    }
+
+    /**
+     * A table's "borders": "rows" (the default, and true), "grid", or "none"
+     * (false, or any empty value).
+     *
+     * @internal
+     */
+    public static function borders(mixed $borders): string
+    {
+        return match (true) {
+            $borders === 'grid' => 'grid',
+            ! $borders, $borders === 'none' => 'none',
+            default => 'rows',
+        };
     }
 
     /** @return array<int, array> */
