@@ -174,6 +174,16 @@ $docs->make()->locale('ar')
 
 A header or footer takes `paragraph`, `table`, `image`, `line` and `spacer` blocks, and its text may use `{page}` and `{pages}`. With mPDF, a header taller than the top margin pushes the body down, as in Word. Chromium and Gotenberg give every page the same header and footer. Templates can hold the same as `header.layout.php`, `footer.layout.php`, `first-header.layout.php` and `first-footer.layout.php`.
 
+### Watermarks
+
+`->watermark('مسودة')` writes text across every page of a PDF. For PDF and Word alike, use an image: Word cannot draw a text watermark, so "مسودة / DRAFT" is an image you prepare once.
+
+```php
+$docs->template('quotation', $data)->watermarkImage(__DIR__.'/images/draft.png', ['opacity' => 0.15, 'width' => 140])->word();
+```
+
+The image sits in the middle of every page, `width` mm wide (140 by default), and follows the document's image rules. In Word it lives in the page header, faded with GD, on the first page too when that has its own header.
+
 ### Your own HTML or views
 
 ```php
