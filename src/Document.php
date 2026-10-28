@@ -38,6 +38,7 @@ use RuntimeException;
  *
  * @method static heading(string $text, int $level = 1, array $style = [])
  * @method static paragraph(string|array $text, array $style = [])
+ * @method static list(array $items, array $options = [])
  * @method static richText(string $html, array $options = [])
  * @method static table(array $rows, array $options = [])
  * @method static image(string $source, float $widthMm = 40, string $align = 'start')
