@@ -15,7 +15,6 @@ All notable changes to `biztecheg/easy-pdf-word` are documented here. The format
 - `keep_together => true` keeps a table on one page: `page-break-inside: avoid` in PDF, and every row kept with the next in Word.
 - A builder table cell's `rowspan` merges it with the cells below, written the HTML way (the rows below leave out the cells it covers): a `rowspan` attribute in PDF, `vMerge` in Word.
 - `->watermarkImage($source, ['opacity' => 0.15, 'width' => 140])`: an image in the middle of every page, in PDF and Word. mPDF uses its watermark image; Chromium and Gotenberg get a fixed image at that opacity; Word gets a header watermark (a header is added when the document has none, and the first page's header gets it too), faded with GD because Word images have no opacity. The image follows the document's image rules; an SVG is left out of Word files with a `warn`. `PdfOptions` gains `watermarkImage`.
-
 - A `list($items, ['ordered' => true, 'start' => 1])` builder block: numbered or bulleted, with sub-lists, in PDF (`ol`/`ul`) and Word (a numbering style per list and list paragraphs, right to left in RTL documents). An item is a string, a run, a list of runs, or `[item, [sub-items]]`; sub-lists are numbered like their list. Numbers follow `->numerals('arabic')`. Rich text and the list block share their Word numbering levels.
 
 ### Changed
