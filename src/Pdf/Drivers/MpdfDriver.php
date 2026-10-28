@@ -7,6 +7,7 @@ use BiztechEG\EasyPdfWord\Contracts\PdfDriver;
 use BiztechEG\EasyPdfWord\Exceptions\DriverNotAvailable;
 use BiztechEG\EasyPdfWord\Fonts\FontRegistry;
 use BiztechEG\EasyPdfWord\Pdf\PdfOptions;
+use BiztechEG\EasyPdfWord\Pdf\Watermark;
 use Mpdf\Config\ConfigVariables;
 use Mpdf\Config\FontVariables;
 use Mpdf\HTMLParserMode;
@@ -75,6 +76,12 @@ class MpdfDriver implements PdfDriver
                 font: strtolower($options->font),
             ));
             $mpdf->showWatermarkText = true;
+        }
+
+        if ($options->watermarkImage) {
+            // Centred on the page, as in Word and Chromium.
+            $mpdf->SetWatermarkImage($options->watermarkImage['src'], $options->watermarkImage['opacity'], Watermark::imageSize($options->watermarkImage), 'P');
+            $mpdf->showWatermarkImage = true;
         }
 
         if ($options->protection) {

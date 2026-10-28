@@ -8,6 +8,7 @@ use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
 use BiztechEG\EasyPdfWord\Exceptions\DriverNotAvailable;
 use BiztechEG\EasyPdfWord\Fonts\FontRegistry;
 use BiztechEG\EasyPdfWord\Pdf\PdfOptions;
+use BiztechEG\EasyPdfWord\Pdf\Watermark;
 use BiztechEG\EasyPdfWord\Support\Color;
 use BiztechEG\EasyPdfWord\Support\DocContext;
 use BiztechEG\EasyPdfWord\Support\HtmlSanitizer;
@@ -118,7 +119,7 @@ class WordRenderer
                 'footer' => $options->footer,
                 'firstHeader' => $options->firstHeader,
                 'firstFooter' => $options->firstFooter,
-            ], $contentWidth);
+            ], $contentWidth, $this->watermark($options));
 
             foreach ($builder->blocks() as $block) {
                 $this->block($section, $block, $contentWidth);
@@ -143,13 +144,15 @@ class WordRenderer
      * footer of the first page from its FIRST variants once either exists,
      * so the other one is repeated there.
      */
-    private function pages(Section $section, array $pages, float $width): void
+    private function pages(Section $section, array $pages, float $width, ?array $watermark = null): void
     {
         $header = $pages['header'] ?? null;
         $footer = $pages['footer'] ?? null;
 
-        if (self::hasContent($header)) {
-            $this->pagePart($section->addHeader(), $header, $width);
+        // A watermark lives in a header, so it gets one even when empty.
+        if (self::hasContent($header) || $watermark !== null) {
+            $this->pagePart($container = $section->addHeader(), $header, $width);
+            $this->addWatermark($container, $watermark);
         }
 
         if (self::hasContent($footer)) {
@@ -161,7 +164,8 @@ class WordRenderer
 
         // An empty FIRST part is how the first page gets none.
         if ($firstHeader !== null || $firstFooter !== null) {
-            $this->pagePart($section->addHeader(Header::FIRST), $firstHeader ?? $header, $width);
+            $this->pagePart($container = $section->addHeader(Header::FIRST), $firstHeader ?? $header, $width);
+            $this->addWatermark($container, $watermark);
             $this->pagePart($section->addFooter(Footer::FIRST), $firstFooter ?? $footer, $width);
         }
     }
@@ -169,6 +173,71 @@ class WordRenderer
     private static function hasContent(DocumentBuilder|string|false|null $part): bool
     {
         return $part instanceof DocumentBuilder ? ! $part->isEmpty() : is_string($part) && $part !== '';
+    }
+
+    /**
+     * The image watermark for Word: in the middle of the page, behind the
+     * text. Word's images have no opacity, so the image is faded with GD.
+     *
+     * @return array{bytes: string, style: array}|null
+     */
+    private function watermark(PdfOptions $options): ?array
+    {
+        $mark = $options->watermarkImage;
+        $bytes = $mark === null ? null : WordImage::load($mark['src']);
+        $image = $bytes === null ? false : @imagecreatefromstring($bytes);
+
+        if ($image === false) {
+            if ($mark !== null) {
+                $this->doc->warn('easy-pdf-word: the watermark image must be a PNG, JPEG, GIF, WebP or BMP image for Word files; the Word file is made without it.');
+            }
+
+            return null;
+        }
+
+        [$width, $height] = Watermark::imageSize($mark);
+
+        return ['bytes' => self::faded($image, $mark['opacity'], $width), 'style' => [
+            'width' => round($width * self::POINTS_PER_MM, 2),
+            'height' => round($height * self::POINTS_PER_MM, 2),
+            'wrappingStyle' => 'behind',
+            'posHorizontal' => 'center',
+            'posHorizontalRel' => 'page',
+            'posVertical' => 'center',
+            'posVerticalRel' => 'page',
+        ]];
+    }
+
+    private function addWatermark(Header $header, ?array $watermark): void
+    {
+        if ($watermark !== null) {
+            $header->addWatermark($watermark['bytes'], $watermark['style']);
+        }
+    }
+
+    /** The image at 150 dpi for its width in mm, with every pixel's alpha scaled by $opacity, as PNG. */
+    private static function faded(\GdImage $image, float $opacity, float $widthMm): string
+    {
+        $width = max(1, min(imagesx($image), (int) round($widthMm / 25.4 * 150)));
+        $height = max(1, (int) round(imagesy($image) * $width / imagesx($image)));
+        $canvas = imagecreatetruecolor($width, $height);
+        imagealphablending($canvas, false);
+        imagesavealpha($canvas, true);
+        imagefill($canvas, 0, 0, imagecolorallocatealpha($canvas, 0, 0, 0, 127));
+        imagecopyresampled($canvas, $image, 0, 0, 0, 0, $width, $height, imagesx($image), imagesy($image));
+
+        for ($y = 0; $y < $height; $y++) {
+            for ($x = 0; $x < $width; $x++) {
+                $rgba = imagecolorat($canvas, $x, $y);
+                $alpha = 127 - (int) round((127 - (($rgba >> 24) & 0x7F)) * $opacity);
+                imagesetpixel($canvas, $x, $y, ($alpha << 24) | ($rgba & 0xFFFFFF));
+            }
+        }
+
+        ob_start();
+        imagepng($canvas);
+
+        return (string) ob_get_clean();
     }
 
     private function pagePart(AbstractContainer $container, DocumentBuilder|string|false|null $part, float $width): void

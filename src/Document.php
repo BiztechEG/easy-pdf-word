@@ -100,6 +100,9 @@ class Document
 
     protected ?array $watermark = null;
 
+    /** @var array{source: string, opacity: float, width: float}|null */
+    protected ?array $watermarkImage = null;
+
     protected ?array $protection = null;
 
     /** What ->password() may allow readers to do (mPDF's permission names). */
@@ -365,7 +368,7 @@ class Document
 
     /**
      * Text across every page of the PDF, such as "مسودة" or "نسخة". Word
-     * files are made without it.
+     * files are made without it: use watermarkImage() for both.
      */
     public function watermark(string $text, float $opacity = 0.12, string $color = '#000000'): static
     {
@@ -377,6 +380,28 @@ class Document
             'text' => mb_substr(trim($text), 0, 100),
             'opacity' => max(0.01, min(1.0, $opacity)),
             'color' => Color::css($color, '#000000'),
+        ];
+
+        return $this;
+    }
+
+    /**
+     * An image across the middle of every page, in PDF and Word: a logo, or
+     * "مسودة / DRAFT" drawn as an image (Word cannot draw a text watermark).
+     * The image follows the document's image rules.
+     *
+     * @param  array{opacity?: float, width?: float}  $options  opacity from 0.01 to 1 (0.15), width in mm (140)
+     */
+    public function watermarkImage(string $source, array $options = []): static
+    {
+        if (trim($source) === '') {
+            throw new InvalidArgumentException('The watermark image is empty.');
+        }
+
+        $this->watermarkImage = [
+            'source' => $source,
+            'opacity' => max(0.01, min(1.0, (float) ($options['opacity'] ?? 0.15))),
+            'width' => max(10.0, min(400.0, (float) ($options['width'] ?? 140))),
         ];
 
         return $this;
@@ -530,12 +555,25 @@ class Document
             ] + $this->watermark,
             protection: $this->protection,
             firstHeader: $html($parts['firstHeader'] ?? null),
+            watermarkImage: $this->watermarkImageOptions($context),
             firstFooter: $html($parts['firstFooter'] ?? null),
             headerDistance: $this->headerDistance,
             footerDistance: $this->footerDistance,
             // A header built from blocks may be taller than the margin.
             fitHeaders: array_filter($parts, fn ($part) => $part instanceof DocumentBuilder) !== [],
         );
+    }
+
+    /** The watermark image as a data URI, or null when the image rules leave it out. */
+    private function watermarkImageOptions(DocContext $context): ?array
+    {
+        if ($this->watermarkImage === null) {
+            return null;
+        }
+
+        $src = $context->image($this->watermarkImage['source']);
+
+        return $src === null ? null : ['src' => $src] + array_diff_key($this->watermarkImage, ['source' => true]);
     }
 
     /**
