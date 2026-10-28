@@ -107,6 +107,18 @@ $docs->make()->locale('ar')->paragraph([
 ]);
 ```
 
+Lists are numbered or bulleted from the start side, with sub-lists, in PDF and Word:
+
+```php
+$docs->make()->locale('ar')->list([
+    'الأسعار لا تشمل ضريبة القيمة المضافة.',
+    'يسري العرض 30 يوماً.',
+    ['التسليم في:', ['الموقع أ', 'الموقع ب']],
+], ['ordered' => true]);
+```
+
+An item is a string, a run, a list of runs, or `[item, [sub-items]]`. `start` sets the first number, and `size`, `color`, `bold`, `italic` and `space_after` style the list.
+
 A `font` must be registered (see [Your own fonts](#your-own-fonts)): the PDF has no file for other names, so they are left out and reported through `warn`. In Word, a registered font becomes its `word` name, or the Word font.
 
 A table row can have its own style, be a total row (bold, with a line above it) or stay on one page with the next row, so a section heading never ends a page:
