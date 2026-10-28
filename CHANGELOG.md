@@ -14,6 +14,7 @@ All notable changes to `biztecheg/easy-pdf-word` are documented here. The format
 - Table and cell `padding` (mm) and `valign` (`top`, `middle`, `bottom`); a row's `style` takes them too.
 - `keep_together => true` keeps a table on one page: `page-break-inside: avoid` in PDF, and every row kept with the next in Word.
 - A builder table cell's `rowspan` merges it with the cells below, written the HTML way (the rows below leave out the cells it covers): a `rowspan` attribute in PDF, `vMerge` in Word.
+- `Document::blocks()` gives the body blocks without rendering (a `make()` document's, or a template's `layout.php`/`word.php` run with its data; none for views, HTML and `word.docx` templates), and `Document::text()` the text of the headers and footers, then of the body: table cells joined with tabs and rows with new lines, rich text reduced to its text. `Doc::make()->blocks()` used to throw `BadMethodCallException`.
 
 ### Changed
 

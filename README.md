@@ -134,6 +134,12 @@ $docs->make()->locale('ar')->table([
 ], ['header' => true, 'borders' => 'grid', 'padding' => 3]);
 ```
 
+In tests, `->blocks()` gives a document's body blocks and `->text()` its text, headers and footers first, without rendering: table cells are joined with tabs, rows with new lines, and rich text is reduced to its text. A template's `layout.php` or `word.php` runs with the data; views and HTML have no blocks.
+
+```php
+$this->assertStringContainsString("الإجمالي\t33,580.00", $docs->template('quotation', $data)->text());
+```
+
 ### Headers and footers
 
 `header()` and `footer()` take HTML, or blocks built in code. Blocks work in PDF and Word, so a letterhead with a logo in a table looks the same in both, and the first page can have its own:
