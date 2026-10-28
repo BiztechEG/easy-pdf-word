@@ -63,6 +63,8 @@ final class EasyPdfWord
             // null means "en" here; in Laravel, the app locale.
             'locale' => null,
             'numerals' => 'latin',
+            // Where Word files, .docx templates, ZIP files and Chromium write temp files; null for the system's temp folder.
+            'temp_dir' => null,
             'pdf' => [
                 'driver' => 'mpdf',
                 'fallback' => 'mpdf',
