@@ -478,7 +478,9 @@ class Document
      */
     public function __call(string $method, array $arguments): static
     {
-        if ($this->builder === null || ! is_callable([$this->builder, $method]) || in_array($method, ['blocks', 'isEmpty'], true)) {
+        // Only block methods: not the builder's readers, nor static helpers such as row().
+        if ($this->builder === null || ! is_callable([$this->builder, $method]) || in_array($method, ['blocks', 'isEmpty'], true)
+            || (new \ReflectionMethod($this->builder, $method))->isStatic()) {
             throw new BadMethodCallException(sprintf('Method %s::%s does not exist.', static::class, $method));
         }
 
