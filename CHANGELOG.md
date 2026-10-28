@@ -4,6 +4,17 @@ All notable changes to `biztecheg/easy-pdf-word` are documented here. The format
 
 ## [Unreleased]
 
+### Added
+
+- Builder runs take `underline`, `strike` and `link` (http, https and mailto only, as in rich text), in PDF and Word. A link is underlined, in Word's link blue unless the run has a colour.
+- A run's `background` reaches Word too, as run shading, which takes any colour.
+- A run's `font` works in PDF when it names a registered font; other names are left out and reported through `warn`. In Word a registered font becomes its new `word` name (`'word' => 'Amiri'` in the font's entry), or the Word font; other names are kept as before.
+- A cell's `link` makes the cell's text a link.
+
+### Changed
+
+- `Support\Color::hex()` and `tint()` read the 148 CSS colour names, so `'color' => 'red'` works in Word as it does in PDF, and rich text keeps `color: red`. Other words still give null.
+
 ## [1.3.0] - 2026-10-28
 
 ### Added

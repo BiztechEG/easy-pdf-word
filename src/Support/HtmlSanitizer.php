@@ -272,9 +272,12 @@ final class HtmlSanitizer
 
     /**
      * http, https and mailto links only. The scheme is read the way a browser
-     * reads it, so "jav&#x09;ascript:" is still javascript.
+     * reads it, so "jav&#x09;ascript:" is still javascript. Builder links
+     * (a run's "link") use the same check.
+     *
+     * @internal
      */
-    private static function href(string $value): ?string
+    public static function href(string $value): ?string
     {
         $strip = fn (string $url) => (string) preg_replace('/[\x00-\x20\x7F]+|\p{Z}+/u', '', $url);
 

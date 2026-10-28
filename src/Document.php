@@ -458,9 +458,9 @@ class Document
         $data = $this->viewData($context);
 
         $html = match (true) {
-            $this->builder !== null => $this->wrapHtml((new HtmlRenderer($options->contentWidth()))->render($this->builder, $context), $context),
+            $this->builder !== null => $this->wrapHtml((new HtmlRenderer($options->contentWidth(), $this->services->fonts))->render($this->builder, $context), $context),
             $this->template !== null && ! $this->template->hasPdfView() && $this->template->supportsPdf()
-                => $this->wrapHtml((new HtmlRenderer($options->contentWidth()))->render($this->runLayout($this->template->pdfLayout(), $data, $context), $context), $context),
+                => $this->wrapHtml((new HtmlRenderer($options->contentWidth(), $this->services->fonts))->render($this->runLayout($this->template->pdfLayout(), $data, $context), $context), $context),
             $this->template !== null => $this->services->views->file($this->template->pdfView(), $data),
             $this->view !== null => $this->services->views->view($this->view, $data),
             default => $this->wrapHtml((string) $this->html, $context),
@@ -503,7 +503,7 @@ class Document
         $context = $this->context(new PdfOptions(locale: $locale, direction: $direction, font: $this->resolvedFont($direction)), null);
         $parts = $pages ? $this->pageParts('pdf', $data, $context) : [];
         $html = fn (DocumentBuilder|string|false|null $part) => match (true) {
-            $part instanceof DocumentBuilder => $digits((new HtmlRenderer)->render($part, $context)),
+            $part instanceof DocumentBuilder => $digits((new HtmlRenderer(fonts: $this->services->fonts))->render($part, $context)),
             is_string($part) => $digits($part),
             default => $part,
         };
@@ -639,7 +639,7 @@ class Document
         }
 
         $builder = $this->builder ?? $this->runLayout($this->template->wordLayout(), $data, $context);
-        $renderer = new WordRenderer((array) $this->config('word', []));
+        $renderer = new WordRenderer((array) $this->config('word', []), $this->services->fonts);
 
         return [$renderer->render($builder, $context, $options, $this->pageParts('word', $data, $context)), 'phpword'];
     }

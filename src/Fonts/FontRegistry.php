@@ -10,7 +10,12 @@ use InvalidArgumentException;
  */
 class FontRegistry
 {
-    /** @var array<string, array{regular: string, bold?: string, italic?: string, bold_italic?: string, arabic?: bool, arabic_separators?: bool}> */
+    /**
+     * "word" is the font's name in Word files, for readers who have it
+     * installed; without it, a run in this font uses the Word font.
+     *
+     * @var array<string, array{regular: string, bold?: string, italic?: string, bold_italic?: string, arabic?: bool, arabic_separators?: bool, word?: string}>
+     */
     private array $fonts = [];
 
     public function __construct(array $custom = [])

@@ -95,6 +95,20 @@ $docs->make()
 
 The same blocks make a Word file with `->word()`.
 
+Text can be a list of runs, each with its own style: `bold`, `italic`, `size`, `color` and `background` (a hex value, `rgb()` or a CSS colour name such as `navy`), `underline`, `strike`, `link` (http, https or mailto), `font` and `ltr`. They look the same in PDF and Word:
+
+```php
+$docs->make()->locale('ar')->paragraph([
+    ['text' => 'السعر شامل الضريبة ', 'bold' => true],
+    ['text' => '12,000', 'strike' => true, 'color' => 'gray'],
+    ['text' => ' 10,000 ريال', 'background' => '#FEF3C7'],
+    ['text' => ' — التفاصيل على '],
+    ['text' => 'موقعنا', 'link' => 'https://biztech.example/offers'],
+]);
+```
+
+A `font` must be registered (see [Your own fonts](#your-own-fonts)): the PDF has no file for other names, so they are left out and reported through `warn`. In Word, a registered font becomes its `word` name, or the Word font.
+
 A table row can have its own style, be a total row (bold, with a line above it) or stay on one page with the next row, so a section heading never ends a page:
 
 ```php
@@ -219,6 +233,8 @@ $docs = EasyPdfWord::create(['fonts' => ['custom' => [
 
 $docs->template('letter', $data)->font('my-font')->pdf();
 ```
+
+Word files do not carry fonts. Add `'word' => 'My Font'` to a font when your readers have it installed: a run with `'font' => 'my-font'` then uses it in Word, and otherwise the Word font (`word.font`, Arial by default).
 
 Some Arabic fonts need their tables fixed before mPDF can shape them:
 

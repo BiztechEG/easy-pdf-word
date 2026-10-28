@@ -2,6 +2,7 @@
 
 namespace BiztechEG\EasyPdfWord\Builder;
 
+use BiztechEG\EasyPdfWord\Fonts\FontRegistry;
 use BiztechEG\EasyPdfWord\Support\Color;
 use BiztechEG\EasyPdfWord\Support\DocContext;
 use BiztechEG\EasyPdfWord\Support\Html;
@@ -18,8 +19,17 @@ class HtmlRenderer
     /** heading() takes levels 1 to 3; rich text has h4 too. */
     private const HEADING_SIZES = [1 => 18, 2 => 14, 3 => 12, 4 => 11];
 
-    /** @param  float  $contentWidth  the width of the page's text in mm, for rich-text images and tables */
-    public function __construct(private readonly float $contentWidth = 180) {}
+    /** Unregistered fonts already reported through warn. */
+    private array $warnedFonts = [];
+
+    /**
+     * @param  float  $contentWidth  the width of the page's text in mm, for rich-text images and tables
+     * @param  FontRegistry|null  $fonts  the fonts a run's "font" may name
+     */
+    public function __construct(
+        private readonly float $contentWidth = 180,
+        private readonly ?FontRegistry $fonts = null,
+    ) {}
 
     public function render(DocumentBuilder $builder, DocContext $doc): string
     {
@@ -142,7 +152,11 @@ class HtmlRenderer
         foreach ($runs as $run) {
             $css = $this->css($run, $doc, withAlign: false);
             $text = $this->text($ltr ? ['ltr' => true] + $run : $run, $doc);
-            $html .= $css === '' ? $text : '<span style="'.$css.'">'.$text.'</span>';
+            $html .= match (true) {
+                $this->href($run) !== null => $this->link($run, $text, $doc),
+                $css === '' => $text,
+                default => '<span style="'.$css.'">'.$text.'</span>',
+            };
         }
 
         return $html;
@@ -234,7 +248,7 @@ class HtmlRenderer
         return implode('<br>', array_map(fn ($line) => match (true) {
             is_array($line) && array_is_list($line) => implode('', array_map(fn ($run) => $this->line($run, $cell, $doc), $line)),
             is_array($line) && ! empty($line['image']) => $this->cellImage($doc->image($line['image']), $line),
-            is_array($line) && ! empty($line['align']) => '<div style="text-align: '.$this->align($line['align'], $doc).';'.$this->css($line, $doc, withAlign: false).'">'.$this->text($line, $doc).'</div>',
+            is_array($line) && ! empty($line['align']) => '<div style="text-align: '.$this->align($line['align'], $doc).';'.$this->css($line, $doc, withAlign: false).'">'.($this->href($line) === null ? $this->text($line, $doc) : $this->link($line, $this->text($line, $doc), $doc)).'</div>',
             default => $this->line($line, $cell, $doc),
         }, $lines));
     }
@@ -257,9 +271,31 @@ class HtmlRenderer
 
     private function line(mixed $line, array $cell, DocContext $doc): string
     {
-        return is_array($line)
-            ? '<span style="'.$this->css($line, $doc, withAlign: false).'">'.$this->text($line, $doc).'</span>'
-            : $this->text(['text' => (string) $line] + $cell, $doc);
+        return match (true) {
+            is_array($line) && $this->href($line) !== null => $this->link($line, $this->text($line, $doc), $doc),
+            is_array($line) => '<span style="'.$this->css($line, $doc, withAlign: false).'">'.$this->text($line, $doc).'</span>',
+            // A cell's own "link" makes its text a link.
+            $this->href($cell) !== null => $this->link(['text' => (string) $line] + $cell, $this->text(['text' => (string) $line] + $cell, $doc), $doc),
+            default => $this->text(['text' => (string) $line] + $cell, $doc),
+        };
+    }
+
+    /** A run's "link": http, https and mailto only, as in rich text. */
+    private function href(array $run): ?string
+    {
+        return is_string($run['link'] ?? null) ? HtmlSanitizer::href($run['link']) : null;
+    }
+
+    /**
+     * A link carries the run's styles itself, because the engines give links
+     * their own colour. It is underlined, in Word's link blue unless the run
+     * has a colour, as in the Word file.
+     */
+    private function link(array $run, string $text, DocContext $doc): string
+    {
+        $style = ['underline' => true, 'color' => Color::css($run['color'] ?? null, '#0563C1')] + $run;
+
+        return '<a href="'.Html::escape((string) $this->href($run)).'" style="'.$this->css($style, $doc, withAlign: false).'">'.$text.'</a>';
     }
 
     /**
@@ -325,7 +361,39 @@ class HtmlRenderer
             $css[] = 'background-color: '.$background;
         }
 
+        $decoration = array_keys(array_filter(['underline' => ! empty($style['underline']), 'line-through' => ! empty($style['strike'])]));
+
+        if ($decoration !== []) {
+            $css[] = 'text-decoration: '.implode(' ', $decoration);
+        }
+
+        if ($font = $this->font($style['font'] ?? null, $doc)) {
+            $css[] = "font-family: '".$font."'";
+        }
+
         return $css === [] ? '' : implode('; ', $css).';';
+    }
+
+    /**
+     * A registered font's name for CSS. Others are left out and reported
+     * once: the PDF engine has no file for them.
+     */
+    private function font(mixed $font, DocContext $doc): ?string
+    {
+        if (! is_string($font) || $font === '') {
+            return null;
+        }
+
+        if ($this->fonts?->has($font)) {
+            return strtolower($font);
+        }
+
+        if (! isset($this->warnedFonts[$key = strtolower($font)])) {
+            $this->warnedFonts[$key] = true;
+            $doc->warn('easy-pdf-word: the font ['.mb_strimwidth($font, 0, 60, '...').'] is not registered, so the text is in the document\'s font.');
+        }
+
+        return null;
     }
 
     private function align(string $align, DocContext $doc): string
