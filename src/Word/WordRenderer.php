@@ -191,8 +191,8 @@ class WordRenderer
             'columns' => [],
         ];
 
-        $rows = $block['rows'];
-        $count = max(array_map(fn ($row) => array_sum(array_map(fn ($cell) => (int) (is_array($cell) ? ($cell['colspan'] ?? 1) : 1), $row)), $rows) ?: [1]);
+        $rows = array_map(DocumentBuilder::rowParts(...), $block['rows']);
+        $count = max(array_map(fn ($row) => array_sum(array_map(fn ($cell) => (int) (is_array($cell) ? ($cell['colspan'] ?? 1) : 1), $row[0])), $rows) ?: [1]);
         $columns = $this->columnWidths($options['columns'], $count, $width);
         $aligns = array_map(fn ($c) => is_array($c) ? ($c['align'] ?? 'start') : 'start', array_values($options['columns']));
 
@@ -211,26 +211,33 @@ class WordRenderer
 
         $last = count($rows) - 1;
 
-        foreach ($rows as $index => $row) {
+        foreach ($rows as $index => [$cells, $rowOptions]) {
             $isHeader = $options['header'] && $index === 0;
             $isFooter = $options['footer'] && $index === $last && ! $isHeader;
+            $isTotal = $rowOptions['total'] && ! $isHeader;
             $table->addRow(null, $isHeader ? ['tblHeader' => true, 'cantSplit' => true] : ['cantSplit' => true]);
             $col = 0;
 
-            foreach (array_values($row) as $cell) {
+            foreach ($cells as $cell) {
                 $cell = is_array($cell) ? $cell : ['text' => (string) $cell];
                 $span = max(1, (int) ($cell['colspan'] ?? 1));
                 $cellWidth = array_sum(array_slice($columns, $col, $span));
-                $style = $cell + ['align' => $aligns[$col] ?? 'start', 'size' => $options['font_size']];
-                $background = $cell['background'] ?? null;
+                // The cell's own style, then the row's, then the table's.
+                $style = $cell + $rowOptions['style'] + ['align' => $aligns[$col] ?? 'start', 'size' => $options['font_size']];
+                $background = $style['background'] ?? null;
 
                 if ($isHeader) {
                     $style += ['bold' => true, 'color' => $options['header_color']];
                     $background ??= $options['header_background'];
-                } elseif ($isFooter) {
+                } elseif ($isFooter || $isTotal) {
                     $style += ['bold' => true];
                 } elseif ($options['striped'] && $index % 2 === 0) {
                     $background ??= $options['striped'];
+                }
+
+                // Word keeps a row with the next one when its paragraphs are kept with the next.
+                if ($rowOptions['keep_with_next']) {
+                    $style['keep_next'] = true;
                 }
 
                 $cellStyle = $border + ['valign' => 'top'];
@@ -243,8 +250,10 @@ class WordRenderer
                     $cellStyle['bgColor'] = $background;
                 }
 
-                if ($borderColor = $this->color($cell['border'] ?? null)) {
+                if ($borderColor = $this->color($style['border'] ?? null)) {
                     $cellStyle += ['borderSize' => 6, 'borderColor' => $borderColor];
+                } elseif ($isTotal) {
+                    $cellStyle += ['borderTopSize' => 8, 'borderTopColor' => $this->color($options['border_color']) ?? 'E5E7EB'];
                 }
 
                 $wordCell = $table->addCell((int) $cellWidth, $cellStyle);

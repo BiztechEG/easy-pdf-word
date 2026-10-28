@@ -95,6 +95,21 @@ $docs->make()
 
 The same blocks make a Word file with `->word()`.
 
+A table row can have its own style, be a total row (bold, with a line above it) or stay on one page with the next row, so a section heading never ends a page:
+
+```php
+use BiztechEG\EasyPdfWord\Builder\DocumentBuilder as B;
+
+$docs->make()->locale('ar')->table([
+    ['البند', 'الكمية', 'الإجمالي'],
+    B::row([['text' => 'أعمال مدنية', 'colspan' => 3]], ['style' => ['bold' => true, 'background' => '#F1F5F9'], 'keep_with_next' => true]),
+    ['حفر', '120', '10,200.00'],
+    B::row([['text' => 'المجموع', 'colspan' => 2], '10,200.00'], ['total' => true]),
+], ['header' => true]);
+```
+
+A cell's own style wins over its row's. Several rows can be totals; `footer => true` still makes the last row bold.
+
 ### Your own HTML or views
 
 ```php
