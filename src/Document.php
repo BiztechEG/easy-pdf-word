@@ -4,6 +4,7 @@ namespace BiztechEG\EasyPdfWord;
 
 use BiztechEG\EasyPdfWord\Arabic\Direction;
 use BiztechEG\EasyPdfWord\Arabic\Numerals;
+use BiztechEG\EasyPdfWord\Builder\BlockText;
 use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
 use BiztechEG\EasyPdfWord\Builder\HtmlRenderer;
 use BiztechEG\EasyPdfWord\Contracts\PdfDriver;
@@ -645,6 +646,61 @@ class Document
     }
 
     /** Run a template's layout.php or word.php. */
+    /**
+     * The blocks of the document's body, without rendering anything: a
+     * Doc::make() document's, or those its template's layout.php or word.php
+     * adds with the document's data. Views, HTML and word.docx templates
+     * have none.
+     *
+     * @return array<int, array>
+     */
+    public function blocks(): array
+    {
+        return $this->bodyBuilder($this->context($this->resolvedOptions(pages: false), null))?->blocks() ?? [];
+    }
+
+    /**
+     * The text of the headers and footers built from blocks (or written as
+     * HTML), then of the body, as blocks() gives it: table cells joined with
+     * tabs and rows with new lines, rich text reduced to its text. Digits are
+     * as written, before ->numerals().
+     */
+    public function text(): string
+    {
+        $context = $this->context($this->resolvedOptions(pages: false), null);
+        $parts = [];
+
+        foreach ($this->pageParts('word', $this->templateData(), $context) as $part) {
+            $text = match (true) {
+                $part instanceof DocumentBuilder => BlockText::of($part->blocks()),
+                is_string($part) => trim(html_entity_decode(strip_tags((string) preg_replace('/<(style|script)\b[^>]*>.*?<\/\1\s*>/is', '', $part)), ENT_QUOTES | ENT_HTML5, 'UTF-8')),
+                default => '',
+            };
+
+            if ($text !== '' && ! in_array($text, $parts, true)) {
+                $parts[] = $text;
+            }
+        }
+
+        $parts[] = BlockText::of($this->bodyBuilder($context)?->blocks() ?? []);
+
+        return trim(implode("\n", array_filter($parts, fn (string $text) => $text !== '')));
+    }
+
+    /** The body as blocks: the document's own, or its template's Word layout run with the data. */
+    private function bodyBuilder(DocContext $context): ?DocumentBuilder
+    {
+        if ($this->builder !== null) {
+            return $this->builder;
+        }
+
+        if ($this->template === null || $this->template->wordFile() || ($layout = $this->template->wordLayout()) === null) {
+            return null;
+        }
+
+        return $this->runLayout($layout, $this->templateData(), $context);
+    }
+
     private function runLayout(callable $layout, array $data, DocContext $context): DocumentBuilder
     {
         $builder = new DocumentBuilder;
