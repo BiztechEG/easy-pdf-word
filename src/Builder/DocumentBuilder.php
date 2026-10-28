@@ -44,6 +44,19 @@ class DocumentBuilder
     }
 
     /**
+     * HTML from a rich-text editor (TipTap, CKEditor), cleaned by
+     * Support\HtmlSanitizer first: headings, paragraphs, lists, quotes, links,
+     * tables and images, with a short list of styles. Unlike Document::html(),
+     * it is safe for HTML your users write.
+     *
+     * @param  array  $options  font_size (pt): the size of the block's text
+     */
+    public function richText(string $html, array $options = []): static
+    {
+        return $this->push('richText', ['html' => $html, 'options' => $options]);
+    }
+
+    /**
      * @param  array<int, array>  $rows  rows of cells
      * @param  array  $options  columns (percent widths, or ['width' => 30, 'align' => 'end']),
      *                          header (first row is a header), header_background, header_color,
