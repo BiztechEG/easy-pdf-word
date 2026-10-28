@@ -126,9 +126,7 @@ return function (DocumentBuilder $quote, array $data, DocContext $doc): void {
         $quote->spacer(2);
         $quote->heading($doc->t('terms'), 3);
 
-        foreach (array_values($data['terms']) as $i => $term) {
-            $quote->paragraph(($i + 1).'. '.$term, ['size' => 9.5, 'space_after' => 1]);
-        }
+        $quote->list(array_map('strval', array_values($data['terms'])), ['ordered' => true, 'size' => 9.5]);
     }
 
     if (! empty($data['notes'])) {

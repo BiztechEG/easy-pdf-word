@@ -53,6 +53,11 @@ class WordRenderer
 
     private string $numerals;
 
+    /** The lists in the file so far, and the numbering style of the one being written. */
+    private int $lists = 0;
+
+    private string $listStyle = '';
+
     /** Whether the Heading1 to Heading4 styles rich text uses are registered. */
     private bool $headingStyles = false;
 
@@ -187,6 +192,7 @@ class WordRenderer
         match ($block['type']) {
             'heading' => $this->heading($container, $block),
             'paragraph' => $this->paragraph($container, $block['runs'], $block['style']),
+            'list' => $this->listBlock($container, $block['items'], $block['options']),
             'richText' => $this->richText($container, $block, $width),
             'table' => $this->table($container, $block, $width),
             'image' => $this->image($container, $this->doc->image($block['source']), $block['width'], $block['align']),
@@ -212,8 +218,41 @@ class WordRenderer
 
     private function paragraph(AbstractContainer $container, array $runs, array $style): void
     {
-        $run = $container->addTextRun($this->paragraphStyle($style));
+        $this->writeRuns($container->addTextRun($this->paragraphStyle($style)), $runs, $style);
+    }
 
+    /**
+     * A list: one numbering style per list, so each starts at its own
+     * number, and a list paragraph per item, right to left in RTL documents.
+     */
+    private function listBlock(AbstractContainer $container, array $items, array $options, int $depth = 0): void
+    {
+        if ($depth === 0) {
+            $this->listStyle = 'EasyList'.(++$this->lists);
+            $this->word->addNumberingStyle($this->listStyle, WordList::style(
+                ! empty($options['ordered']),
+                $this->numerals === Numerals::ARABIC,
+                (int) ($options['start'] ?? 1),
+            ));
+        }
+
+        $style = ['space_after' => 0] + $options;
+
+        foreach ($items as $index => $item) {
+            // The list's space comes after its last item.
+            $last = $depth === 0 && $index === array_key_last($items) && $item['items'] === [];
+            $paragraph = $this->paragraphStyle($last ? ['space_after' => $options['space_after'] ?? 2] + $style : $style);
+            $run = $container->addListItemRun(min($depth, WordList::LEVELS - 1), $this->listStyle, $paragraph);
+            $this->writeRuns($run, $item['runs'], $style);
+
+            if ($item['items'] !== []) {
+                $this->listBlock($container, $item['items'], $options, $depth + 1);
+            }
+        }
+    }
+
+    private function writeRuns(TextRun $run, array $runs, array $style): void
+    {
         foreach ($runs as $part) {
             $text = $this->text($part['text'] ?? '', ! empty($part['ltr']) || ! empty($style['ltr']));
             $link = is_string($part['link'] ?? null) ? HtmlSanitizer::href($part['link']) : null;

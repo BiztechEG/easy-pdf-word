@@ -467,10 +467,8 @@ final class WordHtml
                     continue;
                 }
 
-                $kind === 'ul'
-                    ? $level->setFormat(NumberFormat::BULLET)->setText($depth % 2 === 1 ? '◦' : '•')
-                    : $level->setFormat(NumberFormat::DECIMAL)->setText('%'.($depth + 1).'.');
-                $level->setFont(null)->setHint(null);
+                $own = WordList::level($kind === 'ol', $depth);
+                $level->setFormat($own['format'])->setText($own['text'])->setFont(null)->setHint(null);
             }
         }
     }

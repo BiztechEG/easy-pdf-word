@@ -51,6 +51,18 @@ class DocumentBuilder
     }
 
     /**
+     * A numbered or bulleted list. An item is a string, a run, a list of
+     * runs, or [item, [sub-items]]; sub-lists are numbered like their list.
+     *
+     * @param  array  $options  ordered (numbers, not bullets), start (the first number),
+     *                          and the paragraph styles: size, color, bold, italic, space_after
+     */
+    public function list(array $items, array $options = []): static
+    {
+        return $this->push('list', ['items' => $this->listItems($items), 'options' => $options]);
+    }
+
+    /**
      * HTML from a rich-text editor (TipTap, CKEditor), cleaned by
      * Support\HtmlSanitizer first: headings, paragraphs, lists, quotes, links,
      * tables and images, with a short list of styles. Unlike Document::html(),
@@ -233,6 +245,28 @@ class DocumentBuilder
         $this->blocks[] = ['type' => $type] + $block;
 
         return $this;
+    }
+
+    /** @return list<array{runs: array<int, array>, items: array}> */
+    private function listItems(array $items): array
+    {
+        return array_map(function (mixed $item): array {
+            if (is_array($item) && array_is_list($item) && count($item) === 2 && is_array($item[1]) && array_is_list($item[1])) {
+                return ['runs' => $this->itemRuns($item[0]), 'items' => $this->listItems($item[1])];
+            }
+
+            return ['runs' => $this->itemRuns($item), 'items' => []];
+        }, array_values($items));
+    }
+
+    /** @return array<int, array> a string, one run, or a list of runs */
+    private function itemRuns(mixed $item): array
+    {
+        return match (true) {
+            is_array($item) && ! array_is_list($item) => [$item],
+            is_array($item) => $this->runs($item),
+            default => $this->runs((string) $item),
+        };
     }
 
     /** @return array<int, array> */

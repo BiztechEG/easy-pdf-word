@@ -16,8 +16,11 @@ All notable changes to `biztecheg/easy-pdf-word` are documented here. The format
 - A builder table cell's `rowspan` merges it with the cells below, written the HTML way (the rows below leave out the cells it covers): a `rowspan` attribute in PDF, `vMerge` in Word.
 - A table cell's `overlay` draws a stamp over the cell, behind its text: `['image' => $stamp, 'width' => 35, 'height' => 35, 'offset' => [start, down], 'stretch' => false]`, in mm from the cell's start-top corner. PDF: the cell's background, redrawn with GD at 300 dpi with the offset as transparent space, so mPDF and Chromium place it alike (it stays inside the cell). Word: a floating image behind the text in the cell's first paragraph, placed from the cell and mirrored in RTL. The image follows the document's image rules; SVG stamps are left out and reported through `warn`.
 
+- A `list($items, ['ordered' => true, 'start' => 1])` builder block: numbered or bulleted, with sub-lists, in PDF (`ol`/`ul`) and Word (a numbering style per list and list paragraphs, right to left in RTL documents). An item is a string, a run, a list of runs, or `[item, [sub-items]]`; sub-lists are numbered like their list. Numbers follow `->numerals('arabic')`. Rich text and the list block share their Word numbering levels.
+
 ### Changed
 
+- The bundled quotation template writes its terms as a numbered list instead of paragraphs starting "1. ".
 - `Support\Color::hex()` and `tint()` read the 148 CSS colour names, so `'color' => 'red'` works in Word as it does in PDF, and rich text keeps `color: red`. Other words still give null.
 
 ## [1.3.0] - 2026-10-28

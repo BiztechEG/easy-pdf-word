@@ -2,6 +2,7 @@
 
 namespace BiztechEG\EasyPdfWord\Builder;
 
+use BiztechEG\EasyPdfWord\Arabic\Numerals;
 use BiztechEG\EasyPdfWord\Fonts\FontRegistry;
 use BiztechEG\EasyPdfWord\Support\Color;
 use BiztechEG\EasyPdfWord\Support\DocContext;
@@ -40,6 +41,7 @@ class HtmlRenderer
             $html .= match ($block['type']) {
                 'heading' => $this->heading($block, $doc),
                 'paragraph' => $this->paragraph($block, $doc),
+                'list' => $this->listBlock($block['items'], $block['options'], $doc),
                 'richText' => $this->richText($block, $doc),
                 'table' => $this->table($block, $doc),
                 'image' => $this->image($doc->image($block['source']), $block, $doc),
@@ -83,6 +85,33 @@ class HtmlRenderer
         }
 
         return '<p style="'.trim($css).'">'.$this->runs($block['runs'], $doc, ! empty($style['ltr'])).'</p>';
+    }
+
+    /**
+     * A list: numbers or bullets on the start side, in the document's digits.
+     * Sub-lists are numbered like their list.
+     */
+    private function listBlock(array $items, array $options, DocContext $doc, int $depth = 0): string
+    {
+        $ordered = ! empty($options['ordered']);
+        $type = match (true) {
+            $ordered && $doc->numerals === Numerals::ARABIC => 'arabic-indic',
+            $ordered => 'decimal',
+            default => $depth % 2 === 1 ? 'circle' : 'disc',
+        };
+        $start = $ordered && $depth === 0 && isset($options['start']) ? ' start="'.(int) $options['start'].'"' : '';
+        $css = $depth === 0
+            ? 'margin: 0 0 '.(float) ($options['space_after'] ?? 2).'mm 0; '.$this->css($options, $doc, withAlign: false)
+            : 'margin: 0;';
+        $tag = $ordered ? 'ol' : 'ul';
+        $html = '<'.$tag.$start.' style="list-style-type: '.$type.'; '.trim($css).'">';
+
+        foreach ($items as $item) {
+            $html .= '<li>'.$this->runs($item['runs'], $doc)
+                .($item['items'] === [] ? '' : $this->listBlock($item['items'], $options, $doc, $depth + 1)).'</li>';
+        }
+
+        return $html.'</'.$tag.'>';
     }
 
     /**
