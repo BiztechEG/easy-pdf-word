@@ -2,6 +2,7 @@
 
 namespace BiztechEG\EasyPdfWord\Output;
 
+use BiztechEG\EasyPdfWord\Support\TempDir;
 use Closure;
 use InvalidArgumentException;
 use RuntimeException;
@@ -170,12 +171,13 @@ class File
      * Several files in one .zip, built on the first call that needs its bytes.
      *
      * @param  array<int|string, File>  $files  names as keys, or a list where each file keeps its own name
+     * @param  string|null  $tempDir  where the archive is built; null for the system's temp folder
      */
-    public static function zipOf(array $files, string $filename = 'documents.zip'): self
+    public static function zipOf(array $files, string $filename = 'documents.zip', ?string $tempDir = null): self
     {
         self::checkFiles($files);
 
-        return self::zip(fn () => [self::archive($files), 'zip'], $filename);
+        return self::zip(fn () => [self::archive($files, $tempDir), 'zip'], $filename);
     }
 
     /** @param  array<int|string, mixed>  $files */
@@ -196,24 +198,20 @@ class File
      * The bytes of a .zip holding the files: names as keys, or a list where each file keeps its own name.
      *
      * @param  array<int|string, File>  $files
+     * @param  string|null  $tempDir  where the archive is built; null for the system's temp folder
      */
-    public static function archive(array $files): string
+    public static function archive(array $files, ?string $tempDir = null): string
     {
         if (! class_exists(ZipArchive::class)) {
             throw new RuntimeException('ZIP files need the PHP zip extension (ext-zip).');
         }
 
-        $path = tempnam(sys_get_temp_dir(), 'easy-pdf-word-zip');
-
-        if ($path === false) {
-            throw new RuntimeException('Could not create a ZIP file in '.sys_get_temp_dir().'.');
-        }
-
+        $path = TempDir::file($tempDir, 'easy-pdf-word-zip');
         $zip = new ZipArchive;
 
         try {
             if ($zip->open($path, ZipArchive::OVERWRITE) !== true) {
-                throw new RuntimeException('Could not create a ZIP file in '.sys_get_temp_dir().'.');
+                throw new RuntimeException('Could not create a ZIP file in '.dirname($path).'.');
             }
 
             $names = [];

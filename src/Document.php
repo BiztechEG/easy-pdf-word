@@ -675,11 +675,11 @@ class Document
         $data = $this->templateData();
 
         if ($this->builder === null && ($file = $this->template->wordFile())) {
-            return [(new DocxTemplateFiller)->fill($file, $data, $context), 'docx-template'];
+            return [(new DocxTemplateFiller($this->services->tempDir()))->fill($file, $data, $context), 'docx-template'];
         }
 
         $builder = $this->builder ?? $this->runLayout($this->template->wordLayout(), $data, $context);
-        $renderer = new WordRenderer((array) $this->config('word', []), $this->services->fonts);
+        $renderer = new WordRenderer((array) $this->config('word', []), $this->services->fonts, $this->services->tempDir());
 
         return [$renderer->render($builder, $context, $options, $this->pageParts('word', $data, $context)), 'phpword'];
     }

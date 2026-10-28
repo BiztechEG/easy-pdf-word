@@ -14,6 +14,7 @@ use BiztechEG\EasyPdfWord\Support\DocContext;
 use BiztechEG\EasyPdfWord\Support\HtmlSanitizer;
 use BiztechEG\EasyPdfWord\Support\Qr;
 use BiztechEG\EasyPdfWord\Support\Stamp;
+use BiztechEG\EasyPdfWord\Support\TempDir;
 use PhpOffice\PhpWord\Element\AbstractContainer;
 use PhpOffice\PhpWord\Element\Footer;
 use PhpOffice\PhpWord\Element\Header;
@@ -67,7 +68,8 @@ class WordRenderer
     private bool $pageFields = false;
 
     /** @param  FontRegistry|null  $fonts  maps a run's registered "font" to its Word name */
-    public function __construct(private array $config = [], private ?FontRegistry $fonts = null) {}
+    /** @param  string|null  $tempDir  the temp_dir setting; null for the system's temp folder */
+    public function __construct(private array $config = [], private ?FontRegistry $fonts = null, private ?string $tempDir = null) {}
 
     public static function isAvailable(): bool
     {
@@ -88,6 +90,11 @@ class WordRenderer
             throw DriverNotAvailable::missingPackage('word', 'phpoffice/phpword');
         }
 
+        return TempDir::forPhpWord($this->tempDir, fn () => $this->write($builder, $doc, $options, $pages));
+    }
+
+    private function write(DocumentBuilder $builder, DocContext $doc, PdfOptions $options, ?array $pages): string
+    {
         $this->doc = $doc;
         $this->rtl = $doc->isRtl();
         $this->numerals = $doc->numerals;
@@ -125,7 +132,7 @@ class WordRenderer
                 $this->block($section, $block, $contentWidth);
             }
 
-            $file = tempnam(sys_get_temp_dir(), 'easy-docx');
+            $file = TempDir::file($this->tempDir, 'easy-docx');
             IOFactory::createWriter($word, 'Word2007')->save($file);
 
             return (string) file_get_contents($file);

@@ -55,7 +55,7 @@ class DocumentFactory
      */
     public function zip(array $files, string $filename = 'documents.zip'): File
     {
-        return File::zipOf($files, $filename);
+        return File::zipOf($files, $filename, $this->services->tempDir());
     }
 
     public function templates(): TemplateRegistry

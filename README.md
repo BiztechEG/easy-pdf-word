@@ -294,6 +294,14 @@ The bundled fonts are already fixed this way.
 
 The package treats the data you pass to a template as untrusted: text is escaped in templates, documents built in code and Word files; local images are read only from the folders in `images.paths`; image URLs are ignored unless you allow their hosts; colours, locales and font names must be real values. HTML you pass to `html()` and the templates and views you write are code, and are used as written; clean HTML from users with `HtmlSanitizer` first. See [SECURITY.md](SECURITY.md) to report a vulnerability.
 
+On shared hosting the system's temp folder is shared with other accounts, and documents pass through it while they are made. Set `temp_dir` to a folder of your own, and Word files, .docx templates, ZIP files and Chromium write their temp files there:
+
+```php
+$docs = EasyPdfWord::create(['temp_dir' => __DIR__.'/storage/tmp']);
+```
+
+The folder is created when missing. mPDF keeps its own setting, `pdf.drivers.mpdf.temp_dir`, which by default is already a folder only your system user can open.
+
 ## License
 
 MIT. The bundled fonts are under the SIL Open Font License (see `resources/fonts`). mPDF, an optional engine, is GPL-2.0.

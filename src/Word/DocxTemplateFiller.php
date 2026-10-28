@@ -7,6 +7,7 @@ use BiztechEG\EasyPdfWord\Exceptions\DriverNotAvailable;
 use BiztechEG\EasyPdfWord\Support\Dates;
 use BiztechEG\EasyPdfWord\Support\DocContext;
 use BiztechEG\EasyPdfWord\Support\Qr;
+use BiztechEG\EasyPdfWord\Support\TempDir;
 use DateTimeInterface;
 use PhpOffice\PhpWord\Settings;
 use PhpOffice\PhpWord\TemplateProcessor;
@@ -45,12 +46,21 @@ class DocxTemplateFiller
     /** Joins list values in a placeholder: "، " in Arabic, ", " in English. */
     private string $separator = ', ';
 
+    /** @param  string|null  $tempDir  the temp_dir setting; null for the system's temp folder */
+    public function __construct(private ?string $tempDir = null) {}
+
     public function fill(string $path, array $data, DocContext $doc): string
     {
         if (! class_exists(TemplateProcessor::class)) {
             throw DriverNotAvailable::missingPackage('word', 'phpoffice/phpword');
         }
 
+        // TemplateProcessor copies the template into PhpWord's temp folder.
+        return TempDir::forPhpWord($this->tempDir, fn () => $this->write($path, $data, $doc));
+    }
+
+    private function write(string $path, array $data, DocContext $doc): string
+    {
         $escaping = Settings::isOutputEscapingEnabled();
         Settings::setOutputEscapingEnabled(true);
 
@@ -85,7 +95,7 @@ class DocxTemplateFiller
                 $processor->setValue($variable, $this->isImage($value) || (is_string($value) && str_starts_with($value, 'data:')) ? '' : $this->text($value, $doc));
             }
 
-            $file = $this->temporary[] = tempnam(sys_get_temp_dir(), 'easy-docx');
+            $file = $this->temporary[] = TempDir::file($this->tempDir, 'easy-docx');
             $processor->saveAs($file);
             $content = (string) file_get_contents($file);
 
@@ -217,7 +227,7 @@ class DocxTemplateFiller
             return null;
         }
 
-        $file = $this->temporary[] = tempnam(sys_get_temp_dir(), 'easy-img');
+        $file = $this->temporary[] = TempDir::file($this->tempDir, 'easy-img');
         file_put_contents($file, $bytes);
 
         return $file;
