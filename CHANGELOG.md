@@ -7,7 +7,7 @@ All notable changes to `biztecheg/easy-pdf-word` are documented here. The format
 ### Added
 
 - `Support\HtmlSanitizer` cleans HTML from a rich-text editor (TipTap, CKEditor) for documents: it keeps text, headings, lists, quotes, links, tables and images with a short list of styles (colours, alignment, direction, bold, italic, underline and strike-through, table widths), and removes scripts, event attributes, other styles and links that are not http, https or mailto. Its output is well-formed XHTML in one shape for the PDF and Word renderers. Input is limited to 256 KB, 20 levels of nesting and tables of 200 rows and 20 columns, and the cuts are reported through `warn`.
-- `DocumentBuilder::row($cells, $options)` builds a table row with options: `style` (bold, italic, size, color, background, align, border for every cell; a cell's own style wins), `total` (bold, with a line above it; several rows can be totals) and `keep_with_next` (the row stays on one page with the next one, in PDF and Word). Rows that are not `row()` objects, including rows built from records, are read as before.
+- `DocumentBuilder::row($cells, $options)` builds a table row with options: `style` (bold, italic, size, color, background, align, border for every cell; a cell's own style wins), `total` (bold, with a line above it; several rows can be totals) and `keep_with_next` (the row stays on one page with the next one, in PDF and Word). Rows that are not `row()` objects, including rows built from records, are read as before. It is a static helper: `Doc::make()->row()` throws `BadMethodCallException` instead of doing nothing.
 
 ### Changed
 
