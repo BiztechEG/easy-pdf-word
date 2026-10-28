@@ -4,6 +4,8 @@ All notable changes to `biztecheg/easy-pdf-word` are documented here. The format
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-28
+
 ### Added
 
 - A `temp_dir` setting: Word files, .docx templates (with PhpWord's own temp files, whose global setting is set back afterwards), ZIP files and Chromium write their temp files there instead of the system's temp folder, which shared hosting shares with other accounts. The folder is created when missing. Unset, nothing changes. mPDF keeps `pdf.drivers.mpdf.temp_dir`.
