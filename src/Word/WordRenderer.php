@@ -9,6 +9,9 @@ use BiztechEG\EasyPdfWord\Pdf\PdfOptions;
 use BiztechEG\EasyPdfWord\Support\Color;
 use BiztechEG\EasyPdfWord\Support\DocContext;
 use BiztechEG\EasyPdfWord\Support\HtmlSanitizer;
+use PhpOffice\PhpWord\Style\Font;
+use ReflectionProperty;
+use Throwable;
 use BiztechEG\EasyPdfWord\Support\Qr;
 use PhpOffice\PhpWord\Element\AbstractContainer;
 use PhpOffice\PhpWord\Element\Table;
@@ -33,7 +36,8 @@ class WordRenderer
 
     private const POINTS_PER_MM = 2.8346;
 
-    private const HEADING_SIZES = [1 => 18, 2 => 14, 3 => 12];
+    /** heading() takes levels 1 to 3; rich text has h4 too. */
+    private const HEADING_SIZES = [1 => 18, 2 => 14, 3 => 12, 4 => 11];
 
     private DocContext $doc;
 
@@ -42,6 +46,9 @@ class WordRenderer
     private bool $rtl;
 
     private string $numerals;
+
+    /** Whether the Heading1 to Heading4 styles rich text uses are registered. */
+    private bool $headingStyles = false;
 
     public function __construct(private array $config = []) {}
 
@@ -115,7 +122,7 @@ class WordRenderer
         match ($block['type']) {
             'heading' => $this->heading($container, $block),
             'paragraph' => $this->paragraph($container, $block['runs'], $block['style']),
-            'richText' => $this->plainText($container, $block),
+            'richText' => $this->richText($container, $block, $width),
             'table' => $this->table($container, $block, $width),
             'image' => $this->image($container, $this->doc->image($block['source']), $block['width'], $block['align']),
             'qr' => $this->image($container, Qr::dataUri($block['value']), $block['width'], $block['align']),
@@ -154,6 +161,70 @@ class WordRenderer
 
                 $run->addText($line, $font);
             }
+        }
+    }
+
+    /**
+     * A rich-text block: cleaned by the sanitiser, then written by
+     * PhpWord's HTML parser through WordHtml. If the parser fails, the
+     * block's text is written instead, so one block never stops the file.
+     */
+    private function richText(AbstractContainer $container, array $block, float $width): void
+    {
+        $doc = $this->doc;
+        // The HTML comes from users: only data URIs and URLs, as in the PDF.
+        $image = fn (string $src): ?string => preg_match('#^(https?://|data:)#i', $src) ? $doc->image($src) : null;
+        $html = trim((new HtmlSanitizer($image, $doc->warn(...), $width / self::TWIPS_PER_MM))->sanitize($block['html']));
+
+        if ($html === '') {
+            return;
+        }
+
+        $this->registerHeadingStyles();
+        $size = empty($block['options']['font_size']) ? null : (float) $block['options']['font_size'];
+        $writer = new WordHtml(
+            $this->rtl,
+            fn (string $text): string => $this->text($text),
+            function (Font $font, string $text, bool $body) use ($size): void {
+                // Arabic runs use Word's complex-script properties, as in fontStyle().
+                if (preg_match('/\p{Arabic}/u', $text)) {
+                    $font->setRTL(true);
+                    $font->setLang(new Language(null, null, $this->arabicLocale()));
+                }
+
+                if ($body && $size !== null && $font->getSize() === null) {
+                    $font->setSize($size);
+                }
+            },
+            [
+                'border' => Color::css($doc->theme('border'), '#E5E7EB'),
+                'header_background' => Color::css($doc->theme('primary'), '#0F766E'),
+            ],
+            $width / 20,
+        );
+        $before = count($container->getElements());
+
+        try {
+            $writer->write($container, $html);
+        } catch (Throwable $e) {
+            (new ReflectionProperty(AbstractContainer::class, 'elements'))->setValue($container, array_slice($container->getElements(), 0, $before));
+            $doc->warn('easy-pdf-word: rich text could not be written to Word, so its text was written instead: '.mb_strimwidth($e->getMessage(), 0, 200, '...'));
+            $this->plainText($container, $block);
+        }
+    }
+
+    /** The paragraph styles PhpWord's HTML parser gives h1 to h4, once per file. */
+    private function registerHeadingStyles(): void
+    {
+        if ($this->headingStyles) {
+            return;
+        }
+
+        $this->headingStyles = true;
+
+        foreach (self::HEADING_SIZES as $level => $size) {
+            $color = $level === 1 ? $this->color($this->doc->theme('primary')) : null;
+            $this->word->addFontStyle('Heading'.$level, ['bold' => true, 'size' => $size] + ($color ? ['color' => $color] : []), $this->paragraphStyle(['space_after' => 4, 'keep_next' => true]));
         }
     }
 
