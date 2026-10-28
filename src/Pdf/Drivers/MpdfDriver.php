@@ -9,6 +9,7 @@ use BiztechEG\EasyPdfWord\Fonts\FontRegistry;
 use BiztechEG\EasyPdfWord\Pdf\PdfOptions;
 use Mpdf\Config\ConfigVariables;
 use Mpdf\Config\FontVariables;
+use Mpdf\HTMLParserMode;
 use Mpdf\Mpdf;
 use Mpdf\Output\Destination;
 use Mpdf\WatermarkText;
@@ -53,12 +54,16 @@ class MpdfDriver implements PdfDriver
             $mpdf->SetAuthor($options->author);
         }
 
-        if ($options->header) {
-            $mpdf->SetHTMLHeader($this->pageNumbers($options->header));
-        }
+        if ($options->hasFirstPage()) {
+            $this->namedHeaders($mpdf, $options);
+        } else {
+            if ($options->header) {
+                $mpdf->SetHTMLHeader($this->pageNumbers($options->header));
+            }
 
-        if ($options->footer) {
-            $mpdf->SetHTMLFooter($this->pageNumbers($options->footer));
+            if ($options->footer) {
+                $mpdf->SetHTMLFooter($this->pageNumbers($options->footer));
+            }
         }
 
         if ($options->watermark) {
@@ -139,7 +144,7 @@ class MpdfDriver implements PdfDriver
         // files means a changed or replaced font is never drawn from a stale cache.
         $tempDir = self::tempDir(self::tempDir($this->config['temp_dir'] ?? null).'/fonts-'.$this->fonts->signature());
 
-        return [
+        $config = [
             'mode' => 'utf-8',
             // mPDF turns the page itself for "L", so it gets the upright size.
             'format' => [min($options->paperSize()), max($options->paperSize())],
@@ -148,8 +153,8 @@ class MpdfDriver implements PdfDriver
             'margin_right' => $right,
             'margin_bottom' => $bottom,
             'margin_left' => $left,
-            'margin_header' => min(8, $top / 2),
-            'margin_footer' => min(8, $bottom / 2),
+            'margin_header' => $options->headerDistance ?? min(8, $top / 2),
+            'margin_footer' => $options->footerDistance ?? min(8, $bottom / 2),
             'tempDir' => $tempDir,
             'fontDir' => array_merge((new ConfigVariables)->getDefaults()['fontDir'], $fontDirs),
             'fontdata' => (new FontVariables)->getDefaults()['fontdata'] + $fontdata,
@@ -168,6 +173,48 @@ class MpdfDriver implements PdfDriver
             'curlFollowLocation' => false,
             'curlExecutionTimeout' => 10,
         ];
+
+        if ($options->fitHeaders) {
+            // The margins become a minimum: the body starts below a taller header, as in Word.
+            $config['setAutoTopMargin'] = 'stretch';
+            $config['setAutoBottomMargin'] = 'stretch';
+        }
+
+        return $config;
+    }
+
+    /**
+     * A first page with its own header or footer: named headers, chosen for
+     * the pages by @page and for the first page by @page :first.
+     */
+    private function namedHeaders(Mpdf $mpdf, PdfOptions $options): void
+    {
+        $rules = ['' => [], ':first' => []];
+        $parts = [
+            ['', 'header', 'easyHeader', $options->header],
+            ['', 'footer', 'easyFooter', $options->footer],
+            [':first', 'header', 'easyFirstHeader', $options->firstHeader],
+            [':first', 'footer', 'easyFirstFooter', $options->firstFooter],
+        ];
+
+        foreach ($parts as [$page, $part, $name, $html]) {
+            if ($html === false) {
+                $rules[$page][] = $part.': _blank';
+            } elseif ($html !== null && $html !== '') {
+                $part === 'header'
+                    ? $mpdf->DefHTMLHeaderByName($name, $this->pageNumbers($html))
+                    : $mpdf->DefHTMLFooterByName($name, $this->pageNumbers($html));
+                $rules[$page][] = $part.': html_'.$name;
+            }
+        }
+
+        $css = '';
+
+        foreach ($rules as $page => $declarations) {
+            $css .= $declarations === [] ? '' : '@page '.$page.' { '.implode('; ', $declarations).'; } ';
+        }
+
+        $mpdf->WriteHTML($css, HTMLParserMode::HEADER_CSS);
     }
 
     private function pageNumbers(string $html): string
