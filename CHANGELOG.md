@@ -15,7 +15,6 @@ All notable changes to `biztecheg/easy-pdf-word` are documented here. The format
 - `keep_together => true` keeps a table on one page: `page-break-inside: avoid` in PDF, and every row kept with the next in Word.
 - A builder table cell's `rowspan` merges it with the cells below, written the HTML way (the rows below leave out the cells it covers): a `rowspan` attribute in PDF, `vMerge` in Word.
 - A table cell's `overlay` draws a stamp over the cell, behind its text: `['image' => $stamp, 'width' => 35, 'height' => 35, 'offset' => [start, down], 'stretch' => false]`, in mm from the cell's start-top corner. PDF: the cell's background, redrawn with GD at 300 dpi with the offset as transparent space, so mPDF and Chromium place it alike (it stays inside the cell). Word: a floating image behind the text in the cell's first paragraph, placed from the cell and mirrored in RTL. The image follows the document's image rules; SVG stamps are left out and reported through `warn`.
-
 - A `list($items, ['ordered' => true, 'start' => 1])` builder block: numbered or bulleted, with sub-lists, in PDF (`ol`/`ul`) and Word (a numbering style per list and list paragraphs, right to left in RTL documents). An item is a string, a run, a list of runs, or `[item, [sub-items]]`; sub-lists are numbered like their list. Numbers follow `->numerals('arabic')`. Rich text and the list block share their Word numbering levels.
 
 ### Changed
