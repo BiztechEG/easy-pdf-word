@@ -124,6 +124,14 @@ $docs->make()->locale('ar')->table([
 
 A cell's own style wins over its row's. Several rows can be totals; `footer => true` still makes the last row bold.
 
+A cell's `overlay` draws a stamp over it, behind its text, such as a company stamp over the signature:
+
+```php
+[['lines' => ['مدير المبيعات', '', 'عمرو محمد'], 'overlay' => ['image' => $stamp, 'width' => 35, 'offset' => [5, 2]]]]
+```
+
+`width` and `height` are in mm, and the image keeps its proportions unless `stretch => true`. `offset` is `[start, down]` in mm from the cell's start-top corner: a positive start moves toward the right in Arabic. The image follows the document's image rules. In PDF the stamp is the cell's background, so what lies past the cell's edges is cut off; in Word it floats behind the text.
+
 Tables take `borders` (`'rows'`, the default, `'grid'` or `'none'`), `border_width` in points, `padding` in mm and `valign` (`top`, `middle`, `bottom`); a cell can set its own `padding` and `valign`. `keep_together => true` keeps a small table, such as the totals, on one page. A cell with `rowspan` covers the cells below it, written the HTML way:
 
 ```php
