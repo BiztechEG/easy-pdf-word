@@ -106,6 +106,18 @@ $docs->view('contracts.show', ['contract' => $contract])->pdf();
 
 Views are plain PHP files. They get your data as variables and `$doc`, the document helpers: `$doc->e()` escapes a value, `$doc->money()`, `$doc->date()`, `$doc->inWords()`, `$doc->hijri()` and `$doc->ltr()` format it for the document's language.
 
+### HTML from a rich-text editor
+
+`Support\HtmlSanitizer` cleans HTML that users write in an editor such as TipTap or CKEditor. It keeps headings, paragraphs, bold, italic, underline, strike-through, highlight, colours, alignment, lists, quotes, links, tables and images, and removes scripts, event attributes, other styles and links that are not http, https or mailto:
+
+```php
+use BiztechEG\EasyPdfWord\Support\HtmlSanitizer;
+
+$clean = (new HtmlSanitizer)->sanitize($request['terms']);
+```
+
+By default images are kept only when they are http(s) URLs or PNG, JPEG, GIF or WebP data URIs; pass a closure as the first argument to check them your way. The input is limited to 256 KB, 20 levels of nesting and tables of 200 rows and 20 columns; what goes beyond is cut, and the optional `warn` closure is told.
+
 ### Your own templates
 
 A template is a folder with `template.php` (fields, defaults, sample data), a PDF page `pdf.html.php` or a code layout `layout.php`, optional `word.php` or `word.docx`, `footer.html.php` and `lang/*.json` labels (or `lang/*.php`). Point `templates.paths` at your folders:
@@ -171,7 +183,7 @@ The bundled fonts are already fixed this way.
 
 ## Security
 
-The package treats the data you pass to a template as untrusted: text is escaped in templates, documents built in code and Word files; local images are read only from the folders in `images.paths`; image URLs are ignored unless you allow their hosts; colours, locales and font names must be real values. HTML you pass to `html()` and the templates and views you write are code, and are used as written. See [SECURITY.md](SECURITY.md) to report a vulnerability.
+The package treats the data you pass to a template as untrusted: text is escaped in templates, documents built in code and Word files; local images are read only from the folders in `images.paths`; image URLs are ignored unless you allow their hosts; colours, locales and font names must be real values. HTML you pass to `html()` and the templates and views you write are code, and are used as written; clean HTML from users with `HtmlSanitizer` first. See [SECURITY.md](SECURITY.md) to report a vulnerability.
 
 ## License
 
