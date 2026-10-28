@@ -4,6 +4,10 @@ All notable changes to `biztecheg/easy-pdf-word` are documented here. The format
 
 ## [Unreleased]
 
+### Added
+
+- `Support\HtmlSanitizer` cleans HTML from a rich-text editor (TipTap, CKEditor) for documents: it keeps text, headings, lists, quotes, links, tables and images with a short list of styles (colours, alignment, direction, bold, italic, underline and strike-through, table widths), and removes scripts, event attributes, other styles and links that are not http, https or mailto. Its output is well-formed XHTML in one shape for the PDF and Word renderers. Input is limited to 256 KB, 20 levels of nesting and tables of 200 rows and 20 columns, and the cuts are reported through `warn`.
+
 ## [1.2.0] - 2026-10-13
 
 ### Added
