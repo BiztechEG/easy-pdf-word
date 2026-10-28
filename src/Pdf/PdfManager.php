@@ -227,7 +227,7 @@ class PdfManager
 
         return match ($driver) {
             'mpdf' => new MpdfDriver(($this->fonts)(), $this->engineConfig('mpdf')),
-            'browsershot' => new BrowsershotDriver($this->engineConfig('browsershot'), ($this->fonts)()),
+            'browsershot' => new BrowsershotDriver($this->engineConfig('browsershot') + ['temp_dir' => Data::get($this->config(), 'temp_dir')], ($this->fonts)()),
             'gotenberg' => new GotenbergDriver($this->http, $this->engineConfig('gotenberg'), ($this->fonts)()),
             default => throw new InvalidArgumentException("Driver [{$driver}] not supported."),
         };

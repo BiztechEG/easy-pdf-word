@@ -7,6 +7,7 @@ use BiztechEG\EasyPdfWord\Exceptions\DriverNotAvailable;
 use BiztechEG\EasyPdfWord\Fonts\FontRegistry;
 use BiztechEG\EasyPdfWord\Pdf\PdfOptions;
 use BiztechEG\EasyPdfWord\Pdf\Watermark;
+use BiztechEG\EasyPdfWord\Support\TempDir;
 use Spatie\Browsershot\Browsershot;
 
 /**
@@ -83,7 +84,7 @@ class BrowsershotDriver implements PdfDriver
 
         // Browsershot writes the page to a temp file and removes it only
         // after a successful render; a folder of our own is always removed.
-        $tempPath = sys_get_temp_dir().'/easy-pdf-word-chrome-'.bin2hex(random_bytes(8));
+        $tempPath = TempDir::path(is_string($this->config['temp_dir'] ?? null) ? $this->config['temp_dir'] : null).'/easy-pdf-word-chrome-'.bin2hex(random_bytes(8));
         @mkdir($tempPath, 0700);
         $browsershot->setCustomTempPath($tempPath);
 
