@@ -124,6 +124,16 @@ $docs->make()->locale('ar')->table([
 
 A cell's own style wins over its row's. Several rows can be totals; `footer => true` still makes the last row bold.
 
+Tables take `borders` (`'rows'`, the default, `'grid'` or `'none'`), `border_width` in points, `padding` in mm and `valign` (`top`, `middle`, `bottom`); a cell can set its own `padding` and `valign`. `keep_together => true` keeps a small table, such as the totals, on one page. A cell with `rowspan` covers the cells below it, written the HTML way:
+
+```php
+$docs->make()->locale('ar')->table([
+    ['القسم', 'البند', 'الإجمالي'],
+    [['text' => 'أعمال مدنية', 'rowspan' => 2, 'valign' => 'middle'], 'حفر', '10,200.00'],
+    ['ردم', '4,000.00'],
+], ['header' => true, 'borders' => 'grid', 'padding' => 3]);
+```
+
 ### Headers and footers
 
 `header()` and `footer()` take HTML, or blocks built in code. Blocks work in PDF and Word, so a letterhead with a logo in a table looks the same in both, and the first page can have its own:

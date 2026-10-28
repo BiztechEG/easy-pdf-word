@@ -170,30 +170,41 @@ class HtmlRenderer
             'header_color' => '#FFFFFF',
             'borders' => true,
             'border_color' => $doc->theme('border', '#E5E7EB'),
+            'border_width' => null,
             'striped' => null,
             'footer' => false,
             'font_size' => null,
             'columns' => [],
+            'padding' => null,
+            'valign' => null,
+            'keep_together' => false,
         ];
         $columns = $this->columns($options['columns']);
-        $rows = $block['rows'];
-        $lastIndex = count($rows) - 1;
-        $html = '<table style="width: 100%; border-collapse: collapse; margin-bottom: 3mm;">';
+        $parts = array_map(DocumentBuilder::rowParts(...), $block['rows']);
+        $grid = DocumentBuilder::grid(array_column($parts, 0));
+        $lastIndex = count($parts) - 1;
+        $borders = DocumentBuilder::borders($options['borders']);
+        $line = (isset($options['border_width']) ? (float) $options['border_width'].'pt' : '1px')
+            .' solid '.Color::css($options['border_color'], '#E5E7EB');
+        // mPDF keeps such a table on one page; Chromium reads break-inside.
+        $keep = empty($options['keep_together']) ? '' : ' page-break-inside: avoid; break-inside: avoid;';
+        $html = '<table style="width: 100%; border-collapse: collapse; margin-bottom: 3mm;'.$keep.'">';
 
-        foreach ($rows as $index => $row) {
-            [$cells, $rowOptions] = DocumentBuilder::rowParts($row);
+        foreach ($parts as $index => [, $rowOptions]) {
             $isHeader = $options['header'] && $index === 0;
             $isFooter = $options['footer'] && $index === $lastIndex && ! $isHeader;
             $isTotal = $rowOptions['total'] && ! $isHeader;
             $html .= $index === 0 && $isHeader ? '<thead>' : '';
             // mPDF 8.2.4 and later keep such a row on one page with the next one.
             $html .= $rowOptions['keep_with_next'] ? '<tr style="page-break-after: avoid;">' : '<tr>';
-            $col = 0;
 
-            foreach ($cells as $cell) {
-                $cell = is_array($cell) ? $cell : ['text' => (string) $cell];
+            foreach ($grid[$index] as ['cell' => $cell, 'col' => $col, 'span' => $span, 'rowspan' => $rowspan, 'continue' => $continue]) {
+                // The cell above spans this row.
+                if ($continue) {
+                    continue;
+                }
+
                 $column = $columns[$col] ?? [];
-                $span = (int) ($cell['colspan'] ?? 1);
                 // The cell's own style, then the row's, then the table's.
                 $linesAlign = $this->linesAlign($cell);
                 $style = $cell + ($linesAlign ? ['align' => $linesAlign] : []) + $rowOptions['style']
@@ -210,7 +221,8 @@ class HtmlRenderer
                 $box = Color::isValid($style['border'] ?? null);
                 $border = match (true) {
                     $box => 'border: 1px solid '.$style['border'].';',
-                    (bool) $options['borders'] => 'border-bottom: 1px solid '.Color::css($options['border_color'], '#E5E7EB').';',
+                    $borders === 'grid' => 'border: '.$line.';',
+                    $borders === 'rows' => 'border-bottom: '.$line.';',
                     default => '',
                 };
 
@@ -219,11 +231,13 @@ class HtmlRenderer
                 }
 
                 $width = isset($column['width']) && $span === 1 ? 'width: '.(float) $column['width'].'%;' : '';
+                $padding = is_numeric($style['padding'] ?? $options['padding']) ? (float) ($style['padding'] ?? $options['padding']).'mm' : '2mm';
+                $valign = self::valign($style['valign'] ?? $options['valign']);
                 $tag = $isHeader ? 'th' : 'td';
+                $attributes = ($span > 1 ? ' colspan="'.$span.'"' : '').($rowspan > 1 ? ' rowspan="'.$rowspan.'"' : '');
 
-                $html .= '<'.$tag.($span > 1 ? ' colspan="'.$span.'"' : '').' style="padding: 2mm; vertical-align: top; '
+                $html .= '<'.$tag.$attributes.' style="padding: '.$padding.'; vertical-align: '.$valign.'; '
                     .$border.$width.$this->css($style, $doc).'">'.$this->cellContent($cell, $doc).'</'.$tag.'>';
-                $col += $span;
             }
 
             $html .= '</tr>';
@@ -231,6 +245,11 @@ class HtmlRenderer
         }
 
         return $html.($options['header'] ? '</tbody>' : '').'</table>';
+    }
+
+    private static function valign(mixed $valign): string
+    {
+        return in_array($valign, ['middle', 'bottom'], true) ? $valign : 'top';
     }
 
     private function cellContent(array $cell, DocContext $doc): string
