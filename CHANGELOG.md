@@ -10,6 +10,10 @@ All notable changes to `biztecheg/easy-pdf-word` are documented here. The format
 - A run's `background` reaches Word too, as run shading, which takes any colour.
 - A run's `font` works in PDF when it names a registered font; other names are left out and reported through `warn`. In Word a registered font becomes its new `word` name (`'word' => 'Amiri'` in the font's entry), or the Word font; other names are kept as before.
 - A cell's `link` makes the cell's text a link.
+- Table borders: `borders` takes `'rows'` (the default, as `true`), `'grid'` (every side of every cell) or `'none'` (as `false`), and `border_width` sets their width in points, in PDF and Word.
+- Table and cell `padding` (mm) and `valign` (`top`, `middle`, `bottom`); a row's `style` takes them too.
+- `keep_together => true` keeps a table on one page: `page-break-inside: avoid` in PDF, and every row kept with the next in Word.
+- A builder table cell's `rowspan` merges it with the cells below, written the HTML way (the rows below leave out the cells it covers): a `rowspan` attribute in PDF, `vMerge` in Word.
 
 ### Changed
 
