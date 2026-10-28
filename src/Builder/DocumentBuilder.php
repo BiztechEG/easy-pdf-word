@@ -24,9 +24,16 @@ namespace BiztechEG\EasyPdfWord\Builder;
  * paragraphs, "image" for a picture, "qr" for a QR code) plus any text
  * style, "colspan" and "border" (#hex, a box around the cell). A line can
  * be a string, a styled run, a list of runs, or ['image' => $path, 'width' => 30].
+ *
+ * A row is a list of cells, or DocumentBuilder::row($cells, $options) for a
+ * row with its own style, a total row or a row kept with the next one.
  */
 class DocumentBuilder
 {
+    private const ROW_OPTIONS = ['style', 'total', 'keep_with_next'];
+
+    private const ROW_STYLE = ['bold', 'italic', 'size', 'color', 'background', 'align', 'border'];
+
     /** @var array<int, array> */
     private array $blocks = [];
 
@@ -44,7 +51,7 @@ class DocumentBuilder
     }
 
     /**
-     * @param  array<int, array>  $rows  rows of cells
+     * @param  array<int, array>  $rows  rows of cells, or rows from row()
      * @param  array  $options  columns (percent widths, or ['width' => 30, 'align' => 'end']),
      *                          header (first row is a header), header_background, header_color,
      *                          borders (bool), border_color, striped (#hex), footer (last row bold),
@@ -82,6 +89,48 @@ class DocumentBuilder
     public function line(?string $color = null): static
     {
         return $this->push('line', ['color' => $color]);
+    }
+
+    /**
+     * A table row with options:
+     *
+     *   DocumentBuilder::row([['text' => 'أعمال مدنية', 'colspan' => 6]], ['style' => ['bold' => true], 'keep_with_next' => true])
+     *   DocumentBuilder::row([['text' => 'الإجمالي', 'colspan' => 5], '10,200.00'], ['total' => true])
+     *
+     * @param  array  $cells  the row's cells, as in table()
+     * @param  array  $options  style (bold, italic, size, color, background, align, border for
+     *                          every cell; a cell's own style wins), total (bold, with a line
+     *                          above it; several rows may be totals), keep_with_next (keep the
+     *                          row on one page with the next one, as for a section heading)
+     */
+    public static function row(array $cells, array $options = []): array
+    {
+        return ['cells' => array_values($cells)] + array_intersect_key($options, array_flip(self::ROW_OPTIONS));
+    }
+
+    /**
+     * A table row's cells and options. A row is read as a row() only when it
+     * has a "cells" list and no keys but the row options, so rows built from
+     * records keep being read as their values.
+     *
+     * @internal
+     *
+     * @return array{0: array<int, mixed>, 1: array{style: array, total: bool, keep_with_next: bool}}
+     */
+    public static function rowParts(array $row): array
+    {
+        $isRow = isset($row['cells']) && is_array($row['cells']) && array_is_list($row['cells'])
+            && array_diff(array_keys($row), ['cells', ...self::ROW_OPTIONS]) === [];
+
+        if (! $isRow) {
+            return [array_values($row), ['style' => [], 'total' => false, 'keep_with_next' => false]];
+        }
+
+        return [$row['cells'], [
+            'style' => is_array($row['style'] ?? null) ? array_intersect_key($row['style'], array_flip(self::ROW_STYLE)) : [],
+            'total' => ! empty($row['total']),
+            'keep_with_next' => ! empty($row['keep_with_next']),
+        ]];
     }
 
     /** @return array<int, array> */
