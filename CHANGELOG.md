@@ -14,6 +14,7 @@ All notable changes to `biztecheg/easy-pdf-word` are documented here. The format
 - Table and cell `padding` (mm) and `valign` (`top`, `middle`, `bottom`); a row's `style` takes them too.
 - `keep_together => true` keeps a table on one page: `page-break-inside: avoid` in PDF, and every row kept with the next in Word.
 - A builder table cell's `rowspan` merges it with the cells below, written the HTML way (the rows below leave out the cells it covers): a `rowspan` attribute in PDF, `vMerge` in Word.
+- `->watermarkImage($source, ['opacity' => 0.15, 'width' => 140])`: an image in the middle of every page, in PDF and Word. mPDF uses its watermark image; Chromium and Gotenberg get a fixed image at that opacity; Word gets a header watermark (a header is added when the document has none, and the first page's header gets it too), faded with GD because Word images have no opacity. The image follows the document's image rules; an SVG is left out of Word files with a `warn`. `PdfOptions` gains `watermarkImage`.
 
 ### Changed
 
