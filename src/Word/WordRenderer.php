@@ -10,6 +10,9 @@ use BiztechEG\EasyPdfWord\Support\Color;
 use BiztechEG\EasyPdfWord\Support\DocContext;
 use BiztechEG\EasyPdfWord\Support\Qr;
 use PhpOffice\PhpWord\Element\AbstractContainer;
+use PhpOffice\PhpWord\Element\Footer;
+use PhpOffice\PhpWord\Element\Header;
+use PhpOffice\PhpWord\Element\Section;
 use PhpOffice\PhpWord\Element\Table;
 use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\PhpWord;
@@ -42,6 +45,9 @@ class WordRenderer
 
     private string $numerals;
 
+    /** While a header or footer is written: {page} and {pages} become Word fields. */
+    private bool $pageFields = false;
+
     public function __construct(private array $config = []) {}
 
     public static function isAvailable(): bool
@@ -49,7 +55,15 @@ class WordRenderer
         return class_exists(PhpWord::class);
     }
 
-    public function render(DocumentBuilder $builder, DocContext $doc, PdfOptions $options): string
+    /**
+     * $pages holds the headers and footers ("header", "footer",
+     * "firstHeader", "firstFooter"), each blocks, HTML (written as one line
+     * of text) or, on the first page, false for none. Without it the HTML
+     * in $options is used.
+     *
+     * @param  array<string, DocumentBuilder|string|false|null>|null  $pages
+     */
+    public function render(DocumentBuilder $builder, DocContext $doc, PdfOptions $options, ?array $pages = null): string
     {
         if (! self::isAvailable()) {
             throw DriverNotAvailable::missingPackage('word', 'phpoffice/phpword');
@@ -80,16 +94,13 @@ class WordRenderer
             }
 
             $section = $word->addSection($this->sectionStyle($options));
-
-            if ($options->header) {
-                $this->pageText($section->addHeader(), $options->header);
-            }
-
-            if ($options->footer) {
-                $this->pageText($section->addFooter(), $options->footer);
-            }
-
             $contentWidth = $this->contentWidth($options);
+            $this->pages($section, $pages ?? [
+                'header' => $options->header,
+                'footer' => $options->footer,
+                'firstHeader' => $options->firstHeader,
+                'firstFooter' => $options->firstFooter,
+            ], $contentWidth);
 
             foreach ($builder->blocks() as $block) {
                 $this->block($section, $block, $contentWidth);
@@ -105,6 +116,56 @@ class WordRenderer
 
             if ($file !== null) {
                 @unlink($file);
+            }
+        }
+    }
+
+    /**
+     * The section's headers and footers. Word takes both the header and the
+     * footer of the first page from its FIRST variants once either exists,
+     * so the other one is repeated there.
+     */
+    private function pages(Section $section, array $pages, float $width): void
+    {
+        $header = $pages['header'] ?? null;
+        $footer = $pages['footer'] ?? null;
+
+        if (self::hasContent($header)) {
+            $this->pagePart($section->addHeader(), $header, $width);
+        }
+
+        if (self::hasContent($footer)) {
+            $this->pagePart($section->addFooter(), $footer, $width);
+        }
+
+        $firstHeader = $pages['firstHeader'] ?? null;
+        $firstFooter = $pages['firstFooter'] ?? null;
+
+        // An empty FIRST part is how the first page gets none.
+        if ($firstHeader !== null || $firstFooter !== null) {
+            $this->pagePart($section->addHeader(Header::FIRST), $firstHeader ?? $header, $width);
+            $this->pagePart($section->addFooter(Footer::FIRST), $firstFooter ?? $footer, $width);
+        }
+    }
+
+    private static function hasContent(DocumentBuilder|string|false|null $part): bool
+    {
+        return $part instanceof DocumentBuilder ? ! $part->isEmpty() : is_string($part) && $part !== '';
+    }
+
+    private function pagePart(AbstractContainer $container, DocumentBuilder|string|false|null $part, float $width): void
+    {
+        if (is_string($part) && $part !== '') {
+            $this->pageText($container, $part);
+        } elseif ($part instanceof DocumentBuilder) {
+            $this->pageFields = true;
+
+            try {
+                foreach ($part->blocks() as $block) {
+                    $this->block($container, $block, $width);
+                }
+            } finally {
+                $this->pageFields = false;
             }
         }
     }
@@ -150,7 +211,20 @@ class WordRenderer
                     $run->addTextBreak();
                 }
 
-                $run->addText($line, $font);
+                if (! $this->pageFields) {
+                    $run->addText($line, $font);
+
+                    continue;
+                }
+
+                // Page numbers in a header or footer.
+                foreach (preg_split('/(\{page\}|\{pages\})/', $line, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY) as $piece) {
+                    match ($piece) {
+                        '{page}' => $run->addField('PAGE', [], [], null, $font),
+                        '{pages}' => $run->addField('NUMPAGES', [], [], null, $font),
+                        default => $run->addText($piece, $font),
+                    };
+                }
             }
         }
     }
@@ -440,8 +514,8 @@ class WordRenderer
             'marginRight' => (int) round($right * self::TWIPS_PER_MM),
             'marginBottom' => (int) round($bottom * self::TWIPS_PER_MM),
             'marginLeft' => (int) round($left * self::TWIPS_PER_MM),
-            'headerHeight' => (int) round(min(8, $top / 2) * self::TWIPS_PER_MM),
-            'footerHeight' => (int) round(min(8, $bottom / 2) * self::TWIPS_PER_MM),
+            'headerHeight' => (int) round(($options->headerDistance ?? min(8, $top / 2)) * self::TWIPS_PER_MM),
+            'footerHeight' => (int) round(($options->footerDistance ?? min(8, $bottom / 2)) * self::TWIPS_PER_MM),
         ];
     }
 
