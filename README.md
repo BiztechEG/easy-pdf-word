@@ -153,7 +153,7 @@ $docs->make()->locale('ar')
     ->pdf();
 ```
 
-Headings take the builder's sizes, tables get borders around every cell, and the block follows the document's direction and numerals. Its images must be data URIs or allowed URLs (`images.remote`); paths to files on the server are refused, even in `images.paths`. Word files get the block's text, without formatting, for now.
+Headings take the builder's sizes, tables get borders around every cell, and the block follows the document's direction and numerals. Its images must be data URIs or allowed URLs (`images.remote`); paths to files on the server are refused, even in `images.paths`. Word files keep the formatting too: headings, lists numbered from the right in Arabic, quotes, tables with merged cells, links and images. If Word cannot take a block, its text is written instead and `warn` is told.
 
 To clean the HTML yourself, before storing it for example, `Support\HtmlSanitizer` cleans HTML that users write in an editor such as TipTap or CKEditor. It keeps headings, paragraphs, bold, italic, underline, strike-through, highlight, colours, alignment, lists, quotes, links, tables and images, and removes scripts, event attributes, other styles and links that are not http, https or mailto:
 
