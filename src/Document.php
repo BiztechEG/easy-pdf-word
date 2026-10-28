@@ -19,6 +19,7 @@ use BiztechEG\EasyPdfWord\View\PageLayout;
 use BiztechEG\EasyPdfWord\Word\DocxTemplateFiller;
 use BiztechEG\EasyPdfWord\Word\WordRenderer;
 use BadMethodCallException;
+use Closure;
 use InvalidArgumentException;
 use LogicException;
 use RuntimeException;
@@ -70,6 +71,25 @@ class Document
 
     protected ?string $footer = null;
 
+    /** Headers and footers built in code; a string header and a block header replace each other. */
+    protected ?DocumentBuilder $headerBlocks = null;
+
+    protected ?DocumentBuilder $footerBlocks = null;
+
+    /** The first page's own header and footer: HTML, or false for none. */
+    protected string|false|null $firstHeader = null;
+
+    protected string|false|null $firstFooter = null;
+
+    protected ?DocumentBuilder $firstHeaderBlocks = null;
+
+    protected ?DocumentBuilder $firstFooterBlocks = null;
+
+    /** Millimetres from the page edge to the header and the footer. */
+    protected ?float $headerDistance = null;
+
+    protected ?float $footerDistance = null;
+
     protected ?string $driver = null;
 
     protected ?string $title = null;
@@ -82,6 +102,9 @@ class Document
 
     /** What ->password() may allow readers to do (mPDF's permission names). */
     public const PERMISSIONS = ['print', 'print-highres', 'copy', 'modify', 'annot-forms', 'fill-forms', 'extract', 'assemble'];
+
+    /** The blocks a header or footer may hold. */
+    private const PAGE_BLOCKS = ['paragraph', 'table', 'image', 'line', 'spacer'];
 
     private const THEME_COLORS = ['primary' => '#0F766E', 'text' => '#1F2937', 'muted' => '#6B7280', 'border' => '#E5E7EB'];
 
@@ -262,18 +285,63 @@ class Document
         return $this;
     }
 
-    /** Page header HTML; may use {page} and {pages}. */
-    public function header(string $html): static
+    /**
+     * The page header, on every page: HTML (trusted, as written), or blocks
+     * built at once by fn (DocumentBuilder $h) => $h->table(...). Blocks
+     * work in PDF and Word and take paragraph, table, image, line and
+     * spacer. Text in both may use {page} and {pages}.
+     */
+    public function header(string|Closure $header): static
     {
-        $this->header = $html;
+        [$this->header, $this->headerBlocks] = is_string($header) ? [$header, null] : [null, self::pageBlocks($header)];
 
         return $this;
     }
 
-    /** Page footer HTML; may use {page} and {pages}. */
-    public function footer(string $html): static
+    /** The page footer, the same way as header(). */
+    public function footer(string|Closure $footer): static
     {
-        $this->footer = $html;
+        [$this->footer, $this->footerBlocks] = is_string($footer) ? [$footer, null] : [null, self::pageBlocks($footer)];
+
+        return $this;
+    }
+
+    /** The first page's header, the same way as header(); null for none on the first page. */
+    public function firstPageHeader(string|Closure|null $header): static
+    {
+        [$this->firstHeader, $this->firstHeaderBlocks] = match (true) {
+            $header === null => [false, null],
+            is_string($header) => [$header, null],
+            default => [null, self::pageBlocks($header)],
+        };
+
+        return $this;
+    }
+
+    /** The first page's footer, the same way as header(); null for none on the first page. */
+    public function firstPageFooter(string|Closure|null $footer): static
+    {
+        [$this->firstFooter, $this->firstFooterBlocks] = match (true) {
+            $footer === null => [false, null],
+            is_string($footer) => [$footer, null],
+            default => [null, self::pageBlocks($footer)],
+        };
+
+        return $this;
+    }
+
+    /** Millimetres from the top of the page to the header. */
+    public function headerDistance(float $mm): static
+    {
+        $this->headerDistance = max(0.0, $mm);
+
+        return $this;
+    }
+
+    /** Millimetres from the bottom of the page to the footer. */
+    public function footerDistance(float $mm): static
+    {
+        $this->footerDistance = max(0.0, $mm);
 
         return $this;
     }
@@ -415,6 +483,12 @@ class Document
 
     public function options(): PdfOptions
     {
+        return $this->resolvedOptions();
+    }
+
+    /** @param  bool  $pages  with the headers and footers, as HTML */
+    private function resolvedOptions(bool $pages = true): PdfOptions
+    {
         $locale = $this->resolvedLocale();
         $direction = $this->direction ?? Direction::forLocale($locale);
         $data = $this->templateData();
@@ -425,14 +499,13 @@ class Document
             ? Numerals::convertHtml($html, Numerals::ARABIC, $this->services->fonts->hasArabicSeparators($this->resolvedFont($direction)))
             : $html;
 
-        $partial = function (?string $view) use ($data, $locale, $direction) {
-            if ($view === null) {
-                return null;
-            }
-
-            $context = $this->context(new PdfOptions(locale: $locale, direction: $direction, font: $this->resolvedFont($direction)), null);
-
-            return $this->services->views->file($view, ['doc' => $context] + $data);
+        // Header views and blocks see the document's language and direction.
+        $context = $this->context(new PdfOptions(locale: $locale, direction: $direction, font: $this->resolvedFont($direction)), null);
+        $parts = $pages ? $this->pageParts('pdf', $data, $context) : [];
+        $html = fn (DocumentBuilder|string|false|null $part) => match (true) {
+            $part instanceof DocumentBuilder => $digits((new HtmlRenderer)->render($part, $context)),
+            is_string($part) => $digits($part),
+            default => $part,
         };
 
         // The template's paper wins over the config's, and its own orientation over a suffix like "-L".
@@ -445,8 +518,8 @@ class Document
             direction: $direction,
             locale: $locale,
             font: $this->resolvedFont($direction),
-            header: $digits($this->header ?? $partial($this->template?->headerView())),
-            footer: $digits($this->footer ?? $partial($this->template?->footerView())),
+            header: $html($parts['header'] ?? null),
+            footer: $html($parts['footer'] ?? null),
             title: $this->title ?? $this->template?->title(),
             author: $this->resolvedTheme()['company']['name'] ?? null,
             numerals: $numerals,
@@ -454,7 +527,52 @@ class Document
                 'text' => $numerals === Numerals::ARABIC ? Numerals::convert($this->watermark['text'], Numerals::ARABIC) : $this->watermark['text'],
             ] + $this->watermark,
             protection: $this->protection,
+            firstHeader: $html($parts['firstHeader'] ?? null),
+            firstFooter: $html($parts['firstFooter'] ?? null),
+            headerDistance: $this->headerDistance,
+            footerDistance: $this->footerDistance,
+            // A header built from blocks may be taller than the margin.
+            fitHeaders: array_filter($parts, fn ($part) => $part instanceof DocumentBuilder) !== [],
         );
+    }
+
+    /**
+     * The headers and footers for a format: the document's own, or the
+     * template's. In PDFs a template's header.html.php wins over its
+     * header.layout.php, so existing templates render as before; in Word
+     * the layout wins, as Word cannot show the HTML.
+     *
+     * @return array{header: DocumentBuilder|string|null, footer: DocumentBuilder|string|null, firstHeader: DocumentBuilder|string|false|null, firstFooter: DocumentBuilder|string|false|null}
+     */
+    private function pageParts(string $format, array $data, DocContext $context): array
+    {
+        $layout = fn (string $name) => ($fill = $this->template?->pageLayout($name)) ? self::pageBlocks($fill, $data, $context) : null;
+        $view = fn (?string $file) => $file === null ? null : $this->services->views->file($file, ['doc' => $context] + $data);
+        $part = fn (?DocumentBuilder $blocks, ?string $html, string $name, ?string $file) => $blocks ?? $html ?? ($format === 'word'
+            ? $layout($name) ?? $view($file)
+            : ($file !== null ? $view($file) : $layout($name)));
+
+        return [
+            'header' => $part($this->headerBlocks, $this->header, 'header', $this->template?->headerView()),
+            'footer' => $part($this->footerBlocks, $this->footer, 'footer', $this->template?->footerView()),
+            'firstHeader' => $this->firstHeaderBlocks ?? $this->firstHeader ?? $layout('first-header'),
+            'firstFooter' => $this->firstFooterBlocks ?? $this->firstFooter ?? $layout('first-footer'),
+        ];
+    }
+
+    /** A header or footer's blocks, filled by $fill; only the blocks a page edge can hold. */
+    private static function pageBlocks(callable $fill, mixed ...$arguments): DocumentBuilder
+    {
+        $builder = new DocumentBuilder;
+        $fill($builder, ...$arguments);
+
+        foreach ($builder->blocks() as $block) {
+            if (! in_array($block['type'], self::PAGE_BLOCKS, true)) {
+                throw new InvalidArgumentException("A page header or footer takes paragraph, table, image, line and spacer blocks, not [{$block['type']}].");
+            }
+        }
+
+        return $builder;
     }
 
     /** [10, 20] in a config or template.php means what ->margins(10, 20) means. */
@@ -468,8 +586,10 @@ class Document
 
     public function __clone()
     {
-        if ($this->builder !== null) {
-            $this->builder = clone $this->builder;
+        foreach (['builder', 'headerBlocks', 'footerBlocks', 'firstHeaderBlocks', 'firstFooterBlocks'] as $property) {
+            if ($this->{$property} !== null) {
+                $this->{$property} = clone $this->{$property};
+            }
         }
     }
 
@@ -510,7 +630,7 @@ class Document
     /** @return array{0: string, 1: string} [bytes, engine name] */
     protected function renderWord(): array
     {
-        $options = $this->options();
+        $options = $this->resolvedOptions(pages: false);
         $context = $this->context($options, null);
         $data = $this->templateData();
 
@@ -521,7 +641,7 @@ class Document
         $builder = $this->builder ?? $this->runLayout($this->template->wordLayout(), $data, $context);
         $renderer = new WordRenderer((array) $this->config('word', []));
 
-        return [$renderer->render($builder, $context, $options), 'phpword'];
+        return [$renderer->render($builder, $context, $options, $this->pageParts('word', $data, $context)), 'phpword'];
     }
 
     /** Run a template's layout.php or word.php. */

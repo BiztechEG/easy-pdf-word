@@ -110,6 +110,26 @@ $docs->make()->locale('ar')->table([
 
 A cell's own style wins over its row's. Several rows can be totals; `footer => true` still makes the last row bold.
 
+### Headers and footers
+
+`header()` and `footer()` take HTML, or blocks built in code. Blocks work in PDF and Word, so a letterhead with a logo in a table looks the same in both, and the first page can have its own:
+
+```php
+use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
+
+$docs->make()->locale('ar')
+    ->header(fn (DocumentBuilder $h) => $h->table(
+        [[['image' => __DIR__.'/images/logo.png', 'width' => 30], ['lines' => ['شركة بيزتك', 'الدقي، الجيزة']]]],
+        ['borders' => false, 'columns' => [30, 70]],
+    ))
+    ->footer(fn (DocumentBuilder $f) => $f->paragraph('صفحة {page} من {pages}', ['align' => 'center', 'size' => 8]))
+    ->firstPageHeader(fn (DocumentBuilder $h) => $h->table($fullLetterhead, ['borders' => false]))
+    ->firstPageFooter(null)            // no footer on page 1
+    ->headerDistance(6);               // mm from the top of the page
+```
+
+A header or footer takes `paragraph`, `table`, `image`, `line` and `spacer` blocks, and its text may use `{page}` and `{pages}`. With mPDF, a header taller than the top margin pushes the body down, as in Word. Chromium and Gotenberg give every page the same header and footer. Templates can hold the same as `header.layout.php`, `footer.layout.php`, `first-header.layout.php` and `first-footer.layout.php`.
+
 ### Your own HTML or views
 
 ```php
@@ -147,7 +167,7 @@ By default images are kept only when they are http(s) URLs or PNG, JPEG, GIF or 
 
 ### Your own templates
 
-A template is a folder with `template.php` (fields, defaults, sample data), a PDF page `pdf.html.php` or a code layout `layout.php`, optional `word.php` or `word.docx`, `footer.html.php` and `lang/*.json` labels (or `lang/*.php`). Point `templates.paths` at your folders:
+A template is a folder with `template.php` (fields, defaults, sample data), a PDF page `pdf.html.php` or a code layout `layout.php`, optional `word.php` or `word.docx`, `header.html.php` and `footer.html.php` or their `*.layout.php` versions built in code, and `lang/*.json` labels (or `lang/*.php`). Point `templates.paths` at your folders:
 
 ```php
 $docs = EasyPdfWord::create(['templates' => ['paths' => [__DIR__.'/doc-templates']]]);

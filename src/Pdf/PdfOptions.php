@@ -6,7 +6,8 @@ namespace BiztechEG\EasyPdfWord\Pdf;
  * Page and document settings handed to a PDF engine.
  *
  * Header and footer HTML may use {page} and {pages}; each engine replaces
- * them with its own page-number syntax.
+ * them with its own page-number syntax. firstHeader and firstFooter replace
+ * them on the first page: null keeps the normal one, false leaves it empty.
  */
 class PdfOptions
 {
@@ -15,6 +16,9 @@ class PdfOptions
      * @param  array{0: float, 1: float, 2: float, 3: float}  $margins  mm: top, right, bottom, left
      * @param  array{text: string, opacity: float, color: string}|null  $watermark  text across every page
      * @param  array{user: string, owner: ?string, allow: list<string>}|null  $protection  passwords and what readers may do
+     * @param  float|null  $headerDistance  mm from the top of the page to the header; null for the engine's default
+     * @param  float|null  $footerDistance  mm from the bottom of the page to the footer
+     * @param  bool  $fitHeaders  the margins are a minimum: a taller header or footer pushes the body (mPDF)
      */
     public function __construct(
         public string|array $paper = 'A4',
@@ -30,7 +34,18 @@ class PdfOptions
         public string $numerals = 'latin',
         public ?array $watermark = null,
         public ?array $protection = null,
+        public string|false|null $firstHeader = null,
+        public string|false|null $firstFooter = null,
+        public ?float $headerDistance = null,
+        public ?float $footerDistance = null,
+        public bool $fitHeaders = false,
     ) {}
+
+    /** Whether the first page has its own header or footer. */
+    public function hasFirstPage(): bool
+    {
+        return $this->firstHeader !== null || $this->firstFooter !== null;
+    }
 
     public function isLandscape(): bool
     {

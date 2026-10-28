@@ -148,6 +148,7 @@ class PdfManager
         // Errors in the document itself (a view, invalid data) are not the
         // engine's fault, so they are thrown rather than retried.
         $content = $htmlFor ? $htmlFor($engine) : $html;
+        $this->warnFirstPage($engine, $name, $options);
 
         try {
             $pdf = $engine->render($content, $options);
@@ -179,7 +180,17 @@ class PdfManager
         // Kept short: Browsershot's message holds the whole command, with the header and footer.
         ($this->warn)("easy-pdf-word: [{$name}] failed, falling back to [{$fallback}]: ".self::limit($e->getMessage(), 300));
 
+        $this->warnFirstPage($engine, $fallback, $options);
+
         return [$this->protect($engine->render($htmlFor ? $htmlFor($engine) : $html, $options), $engine, $options), $fallback];
+    }
+
+    /** Chrome's header and footer are the same on every page. */
+    private function warnFirstPage(PdfDriver $engine, string $name, PdfOptions $options): void
+    {
+        if ($options->hasFirstPage() && ($engine instanceof BrowsershotDriver || $engine instanceof GotenbergDriver)) {
+            ($this->warn)("easy-pdf-word: [{$name}] cannot give the first page its own header or footer; it gets the normal ones.");
+        }
     }
 
     /** Tell the developer about something that went wrong without stopping the document. */
