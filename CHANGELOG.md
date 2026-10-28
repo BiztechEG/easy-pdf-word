@@ -15,8 +15,11 @@ All notable changes to `biztecheg/easy-pdf-word` are documented here. The format
 - `keep_together => true` keeps a table on one page: `page-break-inside: avoid` in PDF, and every row kept with the next in Word.
 - A builder table cell's `rowspan` merges it with the cells below, written the HTML way (the rows below leave out the cells it covers): a `rowspan` attribute in PDF, `vMerge` in Word.
 
+- A `list($items, ['ordered' => true, 'start' => 1])` builder block: numbered or bulleted, with sub-lists, in PDF (`ol`/`ul`) and Word (a numbering style per list and list paragraphs, right to left in RTL documents). An item is a string, a run, a list of runs, or `[item, [sub-items]]`; sub-lists are numbered like their list. Numbers follow `->numerals('arabic')`. Rich text and the list block share their Word numbering levels.
+
 ### Changed
 
+- The bundled quotation template writes its terms as a numbered list instead of paragraphs starting "1. ".
 - `Support\Color::hex()` and `tint()` read the 148 CSS colour names, so `'color' => 'red'` works in Word as it does in PDF, and rich text keeps `color: red`. Other words still give null.
 
 ## [1.3.0] - 2026-10-28
