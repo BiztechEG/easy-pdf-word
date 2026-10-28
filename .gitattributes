@@ -1,6 +1,7 @@
 # Left out of the package that Composer downloads.
 /.github export-ignore
 /tests export-ignore
+/AGENTS.md export-ignore
 /.gitattributes export-ignore
 /.gitignore export-ignore
 /phpunit.xml export-ignore
