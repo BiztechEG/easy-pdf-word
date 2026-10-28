@@ -2,6 +2,7 @@
 
 namespace BiztechEG\EasyPdfWord\Tests\Unit;
 
+use BadMethodCallException;
 use BiztechEG\EasyPdfWord\Builder\DocumentBuilder as B;
 use BiztechEG\EasyPdfWord\Document;
 use BiztechEG\EasyPdfWord\EasyPdfWord;
@@ -216,5 +217,12 @@ class BuilderTableTest extends TestCase
         $this->assertStringContainsString('<w:keepNext w:val="1"/>', $rows[0]);
         $this->assertStringContainsString('<w:gridSpan w:val="2"/>', $rows[0]);
         $this->assertStringNotContainsString('<w:keepNext w:val="1"/>', $rows[1]);
+    }
+
+    public function test_a_document_does_not_forward_row(): void
+    {
+        $this->expectException(BadMethodCallException::class);
+
+        EasyPdfWord::create()->make()->row(['a']);
     }
 }
