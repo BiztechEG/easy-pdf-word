@@ -4,6 +4,8 @@ All notable changes to `biztecheg/easy-pdf-word` are documented here. The format
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-28
+
 ### Added
 
 - Builder runs take `underline`, `strike` and `link` (http, https and mailto only, as in rich text), in PDF and Word. A link is underlined, in Word's link blue unless the run has a colour.
