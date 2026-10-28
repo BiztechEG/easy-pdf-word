@@ -38,6 +38,7 @@ use RuntimeException;
  *
  * @method static heading(string $text, int $level = 1, array $style = [])
  * @method static paragraph(string|array $text, array $style = [])
+ * @method static richText(string $html, array $options = [])
  * @method static table(array $rows, array $options = [])
  * @method static image(string $source, float $widthMm = 40, string $align = 'start')
  * @method static qr(string $value, float $sizeMm = 30, string $align = 'start')
@@ -457,9 +458,9 @@ class Document
         $data = $this->viewData($context);
 
         $html = match (true) {
-            $this->builder !== null => $this->wrapHtml((new HtmlRenderer)->render($this->builder, $context), $context),
+            $this->builder !== null => $this->wrapHtml((new HtmlRenderer($options->contentWidth()))->render($this->builder, $context), $context),
             $this->template !== null && ! $this->template->hasPdfView() && $this->template->supportsPdf()
-                => $this->wrapHtml((new HtmlRenderer)->render($this->runLayout($this->template->pdfLayout(), $data, $context), $context), $context),
+                => $this->wrapHtml((new HtmlRenderer($options->contentWidth()))->render($this->runLayout($this->template->pdfLayout(), $data, $context), $context), $context),
             $this->template !== null => $this->services->views->file($this->template->pdfView(), $data),
             $this->view !== null => $this->services->views->view($this->view, $data),
             default => $this->wrapHtml((string) $this->html, $context),

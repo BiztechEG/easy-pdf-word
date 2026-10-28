@@ -66,6 +66,12 @@ class PdfOptions
         return $this->isLandscape() ? [max($size), min($size)] : [min($size), max($size)];
     }
 
+    /** The width of the page's text in mm: the paper less the side margins. */
+    public function contentWidth(): float
+    {
+        return max(1.0, $this->paperSize()[0] - (float) $this->margins[1] - (float) $this->margins[3]);
+    }
+
     public static function unknownPaper(string $paper): \InvalidArgumentException
     {
         return new \InvalidArgumentException("Unknown paper size [{$paper}]. Use one of ".implode(', ', array_keys(self::PAPER_SIZES)).', or [width, height] in mm.');

@@ -373,14 +373,20 @@ class DocContext
         return 'data:'.$mime.';base64,'.base64_encode($content);
     }
 
+    /** Tells the developer about something left out of the document (the PHP error log by default). */
+    public function warn(string $message): void
+    {
+        if ($this->warn !== null) {
+            ($this->warn)($message);
+        }
+    }
+
     /** Null, after telling the developer why an image they may have meant to show was left out. */
     private function leftOut(string $source, string $reason): null
     {
-        if ($this->warn !== null) {
-            // The source can come from user data: no line breaks, and kept short.
-            $source = mb_strimwidth((string) preg_replace('/[\x00-\x1F\x7F]/', '', $source), 0, 200, '...', 'UTF-8');
-            ($this->warn)("easy-pdf-word: image [{$source}] was left out: {$reason}.");
-        }
+        // The source can come from user data: no line breaks, and kept short.
+        $source = mb_strimwidth((string) preg_replace('/[\x00-\x1F\x7F]/', '', $source), 0, 200, '...', 'UTF-8');
+        $this->warn("easy-pdf-word: image [{$source}] was left out: {$reason}.");
 
         return null;
     }
