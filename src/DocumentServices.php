@@ -37,6 +37,14 @@ final class DocumentServices
         return Data::get($this->config instanceof Closure ? ($this->config)() : $this->config, $key, $default);
     }
 
+    /** The temp_dir setting, or null for the system's temp folder. */
+    public function tempDir(): ?string
+    {
+        $dir = $this->config('temp_dir');
+
+        return is_string($dir) && $dir !== '' ? $dir : null;
+    }
+
     public function appLocale(): string
     {
         return ($this->appLocale === null ? null : ($this->appLocale)()) ?? 'en';
