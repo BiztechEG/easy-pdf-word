@@ -5,6 +5,7 @@ namespace BiztechEG\EasyPdfWord\Word;
 use BiztechEG\EasyPdfWord\Arabic\Numerals;
 use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
 use BiztechEG\EasyPdfWord\Exceptions\DriverNotAvailable;
+use BiztechEG\EasyPdfWord\Fonts\FontRegistry;
 use BiztechEG\EasyPdfWord\Pdf\PdfOptions;
 use BiztechEG\EasyPdfWord\Support\Color;
 use BiztechEG\EasyPdfWord\Support\DocContext;
@@ -15,6 +16,7 @@ use PhpOffice\PhpWord\Element\Footer;
 use PhpOffice\PhpWord\Element\Header;
 use PhpOffice\PhpWord\Element\Section;
 use PhpOffice\PhpWord\Element\Table;
+use PhpOffice\PhpWord\Element\TextRun;
 use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\Settings;
@@ -56,7 +58,8 @@ class WordRenderer
     /** While a header or footer is written: {page} and {pages} become Word fields. */
     private bool $pageFields = false;
 
-    public function __construct(private array $config = []) {}
+    /** @param  FontRegistry|null  $fonts  maps a run's registered "font" to its Word name */
+    public function __construct(private array $config = [], private ?FontRegistry $fonts = null) {}
 
     public static function isAvailable(): bool
     {
@@ -212,7 +215,9 @@ class WordRenderer
 
         foreach ($runs as $part) {
             $text = $this->text($part['text'] ?? '', ! empty($part['ltr']) || ! empty($style['ltr']));
-            $font = $this->fontStyle($style, $part, $text);
+            $link = is_string($part['link'] ?? null) ? HtmlSanitizer::href($part['link']) : null;
+            // Links are underlined, in Word's link blue unless the run has a colour, as in the PDF.
+            $font = $this->fontStyle($style, $link === null ? $part : ['underline' => true] + $part + ['color' => '#0563C1'], $text);
             $lines = preg_split('/\R/u', $text);
 
             foreach ($lines as $i => $line) {
@@ -221,7 +226,7 @@ class WordRenderer
                 }
 
                 if (! $this->pageFields) {
-                    $run->addText($line, $font);
+                    $this->addText($run, $line, $font, $link);
 
                     continue;
                 }
@@ -231,11 +236,17 @@ class WordRenderer
                     match ($piece) {
                         '{page}' => $run->addField('PAGE', [], [], null, $font),
                         '{pages}' => $run->addField('NUMPAGES', [], [], null, $font),
-                        default => $run->addText($piece, $font),
+                        default => $this->addText($run, $piece, $font, $link),
                     };
                 }
             }
         }
+    }
+
+    /** Text, or a link when the run has one. */
+    private function addText(TextRun $run, string $text, array $font, ?string $link): void
+    {
+        $link === null ? $run->addText($text, $font) : $run->addLink($link, $text, $font);
     }
 
     /**
@@ -437,7 +448,8 @@ class WordRenderer
             $runs = match (true) {
                 is_array($line) && array_is_list($line) => array_map(fn ($run) => is_array($run) ? $run : ['text' => (string) $run], $line),
                 is_array($line) => [$line],
-                default => [['text' => (string) $line]],
+                // A cell's own "link" makes its text a link.
+                default => [['text' => (string) $line] + array_intersect_key($content, ['link' => true])],
             };
             $this->paragraph($cell, $runs, isset($line['align']) ? ['align' => $line['align']] + $paragraphStyle : $paragraphStyle);
         }
@@ -536,14 +548,46 @@ class WordRenderer
             $font['color'] = $this->color($style['color']);
         }
 
-        if (! empty($style['font'])) {
-            $font['name'] = $style['font'];
+        if (! empty($style['underline'])) {
+            $font['underline'] = Font::UNDERLINE_SINGLE;
+        }
+
+        if (! empty($style['strike'])) {
+            $font['strikethrough'] = true;
+        }
+
+        // Run shading takes any colour; Word's highlight takes only its 16 names.
+        // A cell's or paragraph's background is not the run's.
+        if ($background = $this->color($run['background'] ?? null)) {
+            $font['bgColor'] = $background;
+        }
+
+        if ($name = $this->fontName($style['font'] ?? null)) {
+            $font['name'] = $name;
         }
 
         // Arabic runs use Word's complex-script properties (font, size, bold).
         if (preg_match('/\p{Arabic}/u', $text)) {
             $font['rtl'] = true;
             $font['lang'] = new Language(null, null, $this->arabicLocale());
+        }
+
+        return $font;
+    }
+
+    /**
+     * A registered font is not on the reader's computer: Word gets the name
+     * it was registered with for Word ("word"), or the Word font. Other names
+     * are kept, as fonts installed with Word.
+     */
+    private function fontName(mixed $font): ?string
+    {
+        if (! is_string($font) || $font === '') {
+            return null;
+        }
+
+        if ($this->fonts?->has($font)) {
+            return $this->fonts->get($font)['word'] ?? ($this->config['font'] ?? 'Arial');
         }
 
         return $font;
