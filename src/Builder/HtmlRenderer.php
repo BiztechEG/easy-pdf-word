@@ -100,31 +100,43 @@ class HtmlRenderer
         $html = '<table style="width: 100%; border-collapse: collapse; margin-bottom: 3mm;">';
 
         foreach ($rows as $index => $row) {
+            [$cells, $rowOptions] = DocumentBuilder::rowParts($row);
             $isHeader = $options['header'] && $index === 0;
             $isFooter = $options['footer'] && $index === $lastIndex && ! $isHeader;
+            $isTotal = $rowOptions['total'] && ! $isHeader;
             $html .= $index === 0 && $isHeader ? '<thead>' : '';
-            $html .= '<tr>';
+            // mPDF 8.2.4 and later keep such a row on one page with the next one.
+            $html .= $rowOptions['keep_with_next'] ? '<tr style="page-break-after: avoid;">' : '<tr>';
             $col = 0;
 
-            foreach (array_values($row) as $cell) {
+            foreach ($cells as $cell) {
                 $cell = is_array($cell) ? $cell : ['text' => (string) $cell];
                 $column = $columns[$col] ?? [];
                 $span = (int) ($cell['colspan'] ?? 1);
-                $style = $cell + ['align' => $this->linesAlign($cell) ?? $column['align'] ?? 'start', 'size' => $options['font_size']];
+                // The cell's own style, then the row's, then the table's.
+                $linesAlign = $this->linesAlign($cell);
+                $style = $cell + ($linesAlign ? ['align' => $linesAlign] : []) + $rowOptions['style']
+                    + ['align' => $column['align'] ?? 'start', 'size' => $options['font_size']];
 
                 if ($isHeader) {
                     $style += ['bold' => true, 'color' => $options['header_color'], 'background' => $options['header_background']];
-                } elseif ($isFooter) {
+                } elseif ($isFooter || $isTotal) {
                     $style += ['bold' => true];
                 } elseif ($options['striped'] && $index % 2 === 0) {
                     $style += ['background' => $options['striped']];
                 }
 
+                $box = Color::isValid($style['border'] ?? null);
                 $border = match (true) {
-                    Color::isValid($cell['border'] ?? null) => 'border: 1px solid '.$cell['border'].';',
+                    $box => 'border: 1px solid '.$style['border'].';',
                     (bool) $options['borders'] => 'border-bottom: 1px solid '.Color::css($options['border_color'], '#E5E7EB').';',
                     default => '',
                 };
+
+                if ($isTotal && ! $box) {
+                    $border .= 'border-top: 1pt solid '.Color::css($options['border_color'], '#E5E7EB').';';
+                }
+
                 $width = isset($column['width']) && $span === 1 ? 'width: '.(float) $column['width'].'%;' : '';
                 $tag = $isHeader ? 'th' : 'td';
 
