@@ -3,6 +3,7 @@
 namespace BiztechEG\EasyPdfWord\Word;
 
 use BiztechEG\EasyPdfWord\Arabic\Numerals;
+use BiztechEG\EasyPdfWord\Builder\BlockText;
 use BiztechEG\EasyPdfWord\Builder\DocumentBuilder;
 use BiztechEG\EasyPdfWord\Exceptions\DriverNotAvailable;
 use BiztechEG\EasyPdfWord\Fonts\FontRegistry;
@@ -428,17 +429,11 @@ class WordRenderer
      */
     private function plainText(AbstractContainer $container, array $block): void
     {
-        $html = (new HtmlSanitizer(fn (): ?string => null, $this->doc->warn(...)))->sanitize($block['html']);
-        $html = (string) preg_replace(['#<br/>#', '#</t[dh]>#', '#</(p|h[1-4]|li|blockquote|tr|table|ul|ol)>|<hr/>#'], ["\n", ' ', "\n\n"], $html);
-        $text = htmlspecialchars_decode(strip_tags($html), ENT_QUOTES);
         $style = empty($block['options']['font_size']) ? [] : ['size' => (float) $block['options']['font_size']];
+        $text = BlockText::richText($block['html'], $this->doc->warn(...));
 
-        foreach (preg_split('/\n{2,}/', $text) as $paragraph) {
-            $paragraph = trim((string) preg_replace('/ *\n */', "\n", $paragraph));
-
-            if ($paragraph !== '') {
-                $this->paragraph($container, [['text' => $paragraph]], $style);
-            }
+        foreach ($text === '' ? [] : explode("\n\n", $text) as $paragraph) {
+            $this->paragraph($container, [['text' => $paragraph]], $style);
         }
     }
 
