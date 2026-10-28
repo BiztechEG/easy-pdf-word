@@ -6,11 +6,10 @@ use BiztechEG\EasyPdfWord\Document;
 use BiztechEG\EasyPdfWord\DocumentFactory;
 use BiztechEG\EasyPdfWord\EasyPdfWord;
 use PHPUnit\Framework\TestCase;
-use ZipArchive;
 
 /**
- * The richText() builder block: editor HTML, sanitised, in the PDF (through
- * its HTML) and, as plain text for now, in Word.
+ * The richText() builder block in the PDF, through its HTML. Word is in
+ * WordRichTextTest.
  */
 class RichTextTest extends TestCase
 {
@@ -33,19 +32,6 @@ class RichTextTest extends TestCase
         $html = $document->toHtml();
 
         return trim(substr($html, strpos($html, '<body>') + 6, strpos($html, '</body>') - strpos($html, '<body>') - 6));
-    }
-
-    private static function wordXml(Document $document): string
-    {
-        $file = tempnam(sys_get_temp_dir(), 'easy-docx-test');
-        file_put_contents($file, $document->word()->content());
-        $zip = new ZipArchive;
-        $zip->open($file);
-        $xml = (string) $zip->getFromName('word/document.xml');
-        $zip->close();
-        unlink($file);
-
-        return $xml;
     }
 
     public function test_renders_sanitised_html_in_the_document_direction(): void
@@ -174,22 +160,5 @@ class RichTextTest extends TestCase
             ->pdf();
 
         $this->assertStringStartsWith('%PDF', $pdf->content());
-    }
-
-    public function test_word_gets_the_text_as_paragraphs(): void
-    {
-        $xml = self::wordXml($this->docs()->make()->locale('ar')->richText(
-            '<h2>الشروط</h2><p>السعر <b>شامل</b> &lt;script&gt;<br>سطر ثانٍ</p><ul><li>أول</li><li>ثانٍ</li></ul>'
-            .'<table><tr><td>أ</td><td>ب</td></tr></table><script>alert(1)</script><img src="data:image/png;base64,'.self::PNG.'">',
-            ['font_size' => 10],
-        ));
-
-        preg_match_all('/<w:p>.*?<\/w:p>/s', $xml, $paragraphs);
-        $texts = array_map(fn ($p) => implode('|', array_map('html_entity_decode', preg_match_all('/<w:t[^>]*>(.*?)<\/w:t>/s', $p, $m) ? $m[1] : [])), $paragraphs[0]);
-
-        $this->assertSame(['الشروط', 'السعر شامل <script>|سطر ثانٍ', 'أول', 'ثانٍ', 'أ ب'], array_values(array_filter($texts)));
-        $this->assertStringContainsString('<w:sz w:val="20"/>', $xml);
-        $this->assertStringNotContainsString('alert', $xml);
-        $this->assertStringNotContainsString('<w:drawing>', $xml);
     }
 }
