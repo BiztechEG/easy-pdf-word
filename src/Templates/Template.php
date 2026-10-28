@@ -15,6 +15,10 @@ use RuntimeException;
  *   word.docx         optional Word file with ${placeholders}, designed in Word (wins over word.php)
  *   footer.html.php   optional page footer, may use {page} and {pages} (or footer.blade.php)
  *   header.html.php   optional page header, the same way (or header.blade.php)
+ *   header.layout.php, footer.layout.php, first-header.layout.php, first-footer.layout.php
+ *                     optional page headers and footers built in code, for both formats, the
+ *                     first-page ones for page 1 only: return fn (DocumentBuilder $h, array $data,
+ *                     DocContext $doc). In PDFs, header.html.php and footer.html.php win over them.
  *   lang/{locale}.json optional labels, read in views with $doc->t('key') (or lang/{locale}.php,
  *                     whose keys win over the .json file's)
  */
@@ -156,6 +160,15 @@ class Template
         $layout = require $this->path.'/'.$file;
 
         return is_callable($layout) ? $layout : null;
+    }
+
+    /**
+     * A header or footer built in code: "header", "footer", "first-header"
+     * or "first-footer", from {name}.layout.php.
+     */
+    public function pageLayout(string $name): ?callable
+    {
+        return in_array($name, ['header', 'footer', 'first-header', 'first-footer'], true) ? $this->layout($name.'.layout.php') : null;
     }
 
     public function footerView(): ?string
