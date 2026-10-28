@@ -8,6 +8,7 @@ use BiztechEG\EasyPdfWord\Exceptions\DriverNotAvailable;
 use BiztechEG\EasyPdfWord\Pdf\PdfOptions;
 use BiztechEG\EasyPdfWord\Support\Color;
 use BiztechEG\EasyPdfWord\Support\DocContext;
+use BiztechEG\EasyPdfWord\Support\HtmlSanitizer;
 use BiztechEG\EasyPdfWord\Support\Qr;
 use PhpOffice\PhpWord\Element\AbstractContainer;
 use PhpOffice\PhpWord\Element\Table;
@@ -114,6 +115,7 @@ class WordRenderer
         match ($block['type']) {
             'heading' => $this->heading($container, $block),
             'paragraph' => $this->paragraph($container, $block['runs'], $block['style']),
+            'richText' => $this->plainText($container, $block),
             'table' => $this->table($container, $block, $width),
             'image' => $this->image($container, $this->doc->image($block['source']), $block['width'], $block['align']),
             'qr' => $this->image($container, Qr::dataUri($block['value']), $block['width'], $block['align']),
@@ -151,6 +153,26 @@ class WordRenderer
                 }
 
                 $run->addText($line, $font);
+            }
+        }
+    }
+
+    /**
+     * A rich-text block as plain paragraphs: its text, cleaned by the
+     * sanitiser, without formatting or images.
+     */
+    private function plainText(AbstractContainer $container, array $block): void
+    {
+        $html = (new HtmlSanitizer(fn (): ?string => null, $this->doc->warn(...)))->sanitize($block['html']);
+        $html = (string) preg_replace(['#<br/>#', '#</t[dh]>#', '#</(p|h[1-4]|li|blockquote|tr|table|ul|ol)>|<hr/>#'], ["\n", ' ', "\n\n"], $html);
+        $text = htmlspecialchars_decode(strip_tags($html), ENT_QUOTES);
+        $style = empty($block['options']['font_size']) ? [] : ['size' => (float) $block['options']['font_size']];
+
+        foreach (preg_split('/\n{2,}/', $text) as $paragraph) {
+            $paragraph = trim((string) preg_replace('/ *\n */', "\n", $paragraph));
+
+            if ($paragraph !== '') {
+                $this->paragraph($container, [['text' => $paragraph]], $style);
             }
         }
     }

@@ -5,7 +5,9 @@ namespace BiztechEG\EasyPdfWord\Builder;
 use BiztechEG\EasyPdfWord\Support\Color;
 use BiztechEG\EasyPdfWord\Support\DocContext;
 use BiztechEG\EasyPdfWord\Support\Html;
+use BiztechEG\EasyPdfWord\Support\HtmlSanitizer;
 use BiztechEG\EasyPdfWord\Support\Qr;
+use DOMDocument;
 
 /**
  * Turns builder blocks into HTML body markup that both mPDF and Chromium
@@ -13,7 +15,11 @@ use BiztechEG\EasyPdfWord\Support\Qr;
  */
 class HtmlRenderer
 {
-    private const HEADING_SIZES = [1 => 18, 2 => 14, 3 => 12];
+    /** heading() takes levels 1 to 3; rich text has h4 too. */
+    private const HEADING_SIZES = [1 => 18, 2 => 14, 3 => 12, 4 => 11];
+
+    /** @param  float  $contentWidth  the width of the page's text in mm, for rich-text images and tables */
+    public function __construct(private readonly float $contentWidth = 180) {}
 
     public function render(DocumentBuilder $builder, DocContext $doc): string
     {
@@ -23,6 +29,7 @@ class HtmlRenderer
             $html .= match ($block['type']) {
                 'heading' => $this->heading($block, $doc),
                 'paragraph' => $this->paragraph($block, $doc),
+                'richText' => $this->richText($block, $doc),
                 'table' => $this->table($block, $doc),
                 'image' => $this->image($doc->image($block['source']), $block, $doc),
                 'qr' => $this->image(Qr::dataUri($block['value']), $block, $doc),
@@ -65,6 +72,66 @@ class HtmlRenderer
         }
 
         return '<p style="'.trim($css).'">'.$this->runs($block['runs'], $doc, ! empty($style['ltr'])).'</p>';
+    }
+
+    /**
+     * Editor HTML, sanitised, in the document's direction. Headings take the
+     * builder's sizes and tables the builder's look with a grid; the HTML's
+     * own styles come after these, so they win.
+     */
+    private function richText(array $block, DocContext $doc): string
+    {
+        // The HTML comes from users, so it may not point at files on the server
+        // (a stamp or a signature in images.paths): only data URIs and URLs,
+        // with the same checks as builder images.
+        $image = fn (string $src): ?string => preg_match('#^(https?://|data:)#i', $src) ? $doc->image($src) : null;
+        $html = trim((new HtmlSanitizer($image, $doc->warn(...), $this->contentWidth))->sanitize($block['html']));
+
+        if ($html === '') {
+            return '';
+        }
+
+        $dom = new DOMDocument('1.0', 'UTF-8');
+        $dom->loadXML('<root>'.$html.'</root>', LIBXML_NONET);
+        $border = 'border: 1px solid '.Color::css($doc->theme('border'), '#E5E7EB');
+        $defaults = [
+            'h1' => 'font-size: 18pt; color: '.Color::css($doc->theme('primary'), '#0F766E').';',
+            'blockquote' => 'margin: 0 0 3mm 0; padding-'.$doc->start().': 4mm; border-'.$doc->start().': 2px solid '.Color::css($doc->theme('border'), '#E5E7EB').';',
+            'table' => 'width: 100%; border-collapse: collapse; margin-bottom: 3mm;',
+            'td' => 'padding: 2mm; vertical-align: top; text-align: '.$doc->start().'; '.$border.';',
+            'th' => 'padding: 2mm; vertical-align: top; text-align: '.$doc->start().'; '.$border.'; font-weight: bold; color: #FFFFFF; background-color: '
+                .Color::css($doc->theme('primary'), '#0F766E').';',
+        ];
+
+        foreach ([2, 3, 4] as $level) {
+            $defaults['h'.$level] = 'font-size: '.self::HEADING_SIZES[$level].'pt;';
+        }
+
+        foreach ([1, 2, 3, 4] as $level) {
+            // A heading stays on the same page as the text after it.
+            $defaults['h'.$level] = 'font-weight: bold; margin: 0 0 3mm 0; page-break-after: avoid; '.$defaults['h'.$level];
+        }
+
+        foreach ($dom->getElementsByTagName('*') as $element) {
+            $css = $defaults[$element->tagName] ?? null;
+
+            if ($css !== null) {
+                $own = $element->getAttribute('style');
+                $element->setAttribute('style', $own === '' ? $css : $css.' '.$own);
+            }
+        }
+
+        $body = '';
+
+        foreach ($dom->documentElement->childNodes as $node) {
+            $body .= $dom->saveXML($node, LIBXML_NOEMPTYTAG);
+        }
+
+        // <br></br> is two line breaks to a browser.
+        $body = (string) preg_replace('#<(br|hr|img)([^>]*)></\1>#', '<$1$2/>', $body);
+        $size = empty($block['options']['font_size']) ? '' : ' font-size: '.(float) $block['options']['font_size'].'pt;';
+
+        return '<div dir="'.$doc->direction.'" style="direction: '.$doc->direction.'; text-align: '.$doc->start().';'.$size.'">'.$body.'</div>';
     }
 
     /** @param  bool  $ltr  the whole paragraph is left to right, as in the Word file */

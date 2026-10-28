@@ -123,7 +123,19 @@ Views are plain PHP files. They get your data as variables and `$doc`, the docum
 
 ### HTML from a rich-text editor
 
-`Support\HtmlSanitizer` cleans HTML that users write in an editor such as TipTap or CKEditor. It keeps headings, paragraphs, bold, italic, underline, strike-through, highlight, colours, alignment, lists, quotes, links, tables and images, and removes scripts, event attributes, other styles and links that are not http, https or mailto:
+`richText()` adds HTML that users write in an editor to a document built in code, such as the terms of a price offer. The HTML is cleaned first, so it is safe to pass as it is, unlike `html()`:
+
+```php
+$docs->make()->locale('ar')
+    ->richText($offer->preamble)
+    ->table($rows, ['header' => true])
+    ->richText($offer->terms, ['font_size' => 10])
+    ->pdf();
+```
+
+Headings take the builder's sizes, tables get borders around every cell, and the block follows the document's direction and numerals. Its images must be data URIs or allowed URLs (`images.remote`); paths to files on the server are refused, even in `images.paths`. Word files get the block's text, without formatting, for now.
+
+To clean the HTML yourself, before storing it for example, `Support\HtmlSanitizer` cleans HTML that users write in an editor such as TipTap or CKEditor. It keeps headings, paragraphs, bold, italic, underline, strike-through, highlight, colours, alignment, lists, quotes, links, tables and images, and removes scripts, event attributes, other styles and links that are not http, https or mailto:
 
 ```php
 use BiztechEG\EasyPdfWord\Support\HtmlSanitizer;
