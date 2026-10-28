@@ -341,43 +341,62 @@ class WordRenderer
             'header_color' => '#FFFFFF',
             'borders' => true,
             'border_color' => $this->doc->theme('border', '#E5E7EB'),
+            'border_width' => null,
             'striped' => null,
             'footer' => false,
             'font_size' => null,
             'columns' => [],
+            'padding' => null,
+            'valign' => null,
+            'keep_together' => false,
         ];
 
         $rows = array_map(DocumentBuilder::rowParts(...), $block['rows']);
-        $count = max(array_map(fn ($row) => array_sum(array_map(fn ($cell) => (int) (is_array($cell) ? ($cell['colspan'] ?? 1) : 1), $row[0])), $rows) ?: [1]);
-        $columns = $this->columnWidths($options['columns'], $count, $width);
+        $grid = DocumentBuilder::grid(array_column($rows, 0));
+        $count = max(array_map(fn ($row) => max(array_map(fn ($entry) => $entry['col'] + $entry['span'], $row) ?: [0]), $grid) ?: [1]);
+        $columns = $this->columnWidths($options['columns'], max(1, $count), $width);
         $aligns = array_map(fn ($c) => is_array($c) ? ($c['align'] ?? 'start') : 'start', array_values($options['columns']));
 
-        $border = $options['borders'] ? ['borderBottomSize' => 6, 'borderBottomColor' => $this->color($options['border_color'])] : [];
+        // Border sizes are in eighths of a point; 6 is the 1px of the PDF.
+        $size = isset($options['border_width']) ? max(2, min(96, (int) round((float) $options['border_width'] * 8))) : 6;
+        $borderColor = $this->color($options['border_color']);
+        $border = match (DocumentBuilder::borders($options['borders'])) {
+            'grid' => ['borderSize' => $size, 'borderColor' => $borderColor],
+            'rows' => ['borderBottomSize' => $size, 'borderBottomColor' => $borderColor],
+            default => [],
+        };
+        $margin = is_numeric($options['padding']) ? (int) round((float) $options['padding'] * self::TWIPS_PER_MM) : null;
 
         /** @var Table $table */
         $table = $container->addTable([
             'width' => 100 * 50,
             'unit' => TblWidth::PERCENT,
             'layout' => TableStyle::LAYOUT_FIXED,
-            'cellMarginTop' => 60,
-            'cellMarginBottom' => 60,
-            'cellMarginLeft' => 100,
-            'cellMarginRight' => 100,
+            'cellMarginTop' => $margin ?? 60,
+            'cellMarginBottom' => $margin ?? 60,
+            'cellMarginLeft' => $margin ?? 100,
+            'cellMarginRight' => $margin ?? 100,
         ] + ($this->rtl ? ['bidiVisual' => true] : []));
 
         $last = count($rows) - 1;
+        // Continuation cells take the look of the cell they continue.
+        $merged = [];
 
-        foreach ($rows as $index => [$cells, $rowOptions]) {
+        foreach ($rows as $index => [, $rowOptions]) {
             $isHeader = $options['header'] && $index === 0;
             $isFooter = $options['footer'] && $index === $last && ! $isHeader;
             $isTotal = $rowOptions['total'] && ! $isHeader;
             $table->addRow(null, $isHeader ? ['tblHeader' => true, 'cantSplit' => true] : ['cantSplit' => true]);
-            $col = 0;
 
-            foreach ($cells as $cell) {
-                $cell = is_array($cell) ? $cell : ['text' => (string) $cell];
-                $span = max(1, (int) ($cell['colspan'] ?? 1));
+            foreach ($grid[$index] as ['cell' => $cell, 'col' => $col, 'span' => $span, 'rowspan' => $rowspan, 'continue' => $continue]) {
                 $cellWidth = array_sum(array_slice($columns, $col, $span));
+
+                if ($continue) {
+                    $table->addCell((int) $cellWidth, ['vMerge' => 'continue'] + ($merged[$col] ?? []));
+
+                    continue;
+                }
+
                 // The cell's own style, then the row's, then the table's.
                 $style = $cell + $rowOptions['style'] + ['align' => $aligns[$col] ?? 'start', 'size' => $options['font_size']];
                 $background = $style['background'] ?? null;
@@ -391,12 +410,17 @@ class WordRenderer
                     $background ??= $options['striped'];
                 }
 
-                // Word keeps a row with the next one when its paragraphs are kept with the next.
-                if ($rowOptions['keep_with_next']) {
+                // Word keeps a row with the next one when its paragraphs are
+                // kept with the next; a table kept together is every row but the last.
+                if ($rowOptions['keep_with_next'] || (! empty($options['keep_together']) && $index < $last)) {
                     $style['keep_next'] = true;
                 }
 
-                $cellStyle = $border + ['valign' => 'top'];
+                $cellStyle = $border + ['valign' => match ($style['valign'] ?? $options['valign']) {
+                    'middle' => 'center',
+                    'bottom' => 'bottom',
+                    default => 'top',
+                }];
 
                 if ($span > 1) {
                     $cellStyle['gridSpan'] = $span;
@@ -406,15 +430,25 @@ class WordRenderer
                     $cellStyle['bgColor'] = $background;
                 }
 
-                if ($borderColor = $this->color($style['border'] ?? null)) {
-                    $cellStyle += ['borderSize' => 6, 'borderColor' => $borderColor];
+                if ($boxColor = $this->color($style['border'] ?? null)) {
+                    // A box replaces the table's borders.
+                    $cellStyle = array_diff_key($cellStyle, $border) + ['borderSize' => 6, 'borderColor' => $boxColor];
                 } elseif ($isTotal) {
-                    $cellStyle += ['borderTopSize' => 8, 'borderTopColor' => $this->color($options['border_color']) ?? 'E5E7EB'];
+                    $cellStyle += ['borderTopSize' => 8, 'borderTopColor' => $borderColor ?? 'E5E7EB'];
+                }
+
+                if (is_numeric($style['padding'] ?? null)) {
+                    $padding = (int) round((float) $style['padding'] * self::TWIPS_PER_MM);
+                    $cellStyle += ['paddingTop' => $padding, 'paddingBottom' => $padding, 'paddingLeft' => $padding, 'paddingRight' => $padding];
+                }
+
+                if ($rowspan > 1) {
+                    $merged[$col] = $cellStyle;
+                    $cellStyle['vMerge'] = 'restart';
                 }
 
                 $wordCell = $table->addCell((int) $cellWidth, $cellStyle);
                 $this->cellContent($wordCell, $cell, $style);
-                $col += $span;
             }
         }
 
