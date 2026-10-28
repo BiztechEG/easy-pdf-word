@@ -12,6 +12,7 @@ use BiztechEG\EasyPdfWord\Support\Color;
 use BiztechEG\EasyPdfWord\Support\DocContext;
 use BiztechEG\EasyPdfWord\Support\HtmlSanitizer;
 use BiztechEG\EasyPdfWord\Support\Qr;
+use BiztechEG\EasyPdfWord\Support\Stamp;
 use PhpOffice\PhpWord\Element\AbstractContainer;
 use PhpOffice\PhpWord\Element\Footer;
 use PhpOffice\PhpWord\Element\Header;
@@ -483,10 +484,58 @@ class WordRenderer
 
                 $wordCell = $table->addCell((int) $cellWidth, $cellStyle);
                 $this->cellContent($wordCell, $cell, $style);
+                $sideMargins = isset($cellStyle['paddingLeft']) ? 2 * $cellStyle['paddingLeft'] : 2 * ($margin ?? 100);
+                $this->overlay($wordCell, $cell, ($cellWidth - $sideMargins) / 20);
             }
         }
 
         $container->addText('', ['size' => 4], ['spaceAfter' => 0, 'spaceBefore' => 0]);
+    }
+
+    /**
+     * A cell's "overlay": a stamp floating behind the text, anchored in the
+     * cell's first paragraph and placed from the cell's start-top corner.
+     *
+     * @param  float  $textWidth  the width of the cell's text, in points
+     */
+    private function overlay(AbstractContainer $wordCell, array $cell, float $textWidth): void
+    {
+        $overlay = $cell['overlay'] ?? null;
+
+        if (! is_array($overlay) || ! is_string($overlay['image'] ?? null) || $overlay['image'] === '') {
+            return;
+        }
+
+        $source = $this->doc->image($overlay['image']);
+        $bytes = $source === null ? null : WordImage::load($source);
+        $box = $bytes === null ? null : Stamp::measure($overlay, $bytes);
+
+        if ($box === null) {
+            if ($source !== null) {
+                $this->doc->warn('easy-pdf-word: a cell overlay must be a PNG, JPEG, GIF, WebP or BMP image inside its cell; it was left out.');
+            }
+
+            return;
+        }
+
+        $width = $box['width'] * self::POINTS_PER_MM;
+        $start = $box['start'] * self::POINTS_PER_MM;
+        $first = $wordCell->getElements()[0] ?? null;
+        $paragraph = $first instanceof TextRun ? $first : $wordCell->addTextRun();
+
+        $paragraph->addImage($bytes, [
+            'width' => round($width, 2),
+            'height' => round($box['height'] * self::POINTS_PER_MM, 2),
+            'wrappingStyle' => 'behind',
+            'positioning' => 'relative',
+            'posHorizontal' => 'absolute',
+            'posHorizontalRel' => 'column',
+            'posVertical' => 'absolute',
+            'posVerticalRel' => 'text',
+            // Measured from the cell's left edge: the start side is mirrored in RTL.
+            'marginLeft' => round($this->rtl ? $textWidth - $start - $width : $start, 2),
+            'marginTop' => round($box['down'] * self::POINTS_PER_MM, 2),
+        ]);
     }
 
     private function cellContent(AbstractContainer $cell, array $content, array $style): void

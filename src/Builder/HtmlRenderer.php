@@ -9,6 +9,7 @@ use BiztechEG\EasyPdfWord\Support\DocContext;
 use BiztechEG\EasyPdfWord\Support\Html;
 use BiztechEG\EasyPdfWord\Support\HtmlSanitizer;
 use BiztechEG\EasyPdfWord\Support\Qr;
+use BiztechEG\EasyPdfWord\Support\Stamp;
 use DOMDocument;
 
 /**
@@ -266,7 +267,7 @@ class HtmlRenderer
                 $attributes = ($span > 1 ? ' colspan="'.$span.'"' : '').($rowspan > 1 ? ' rowspan="'.$rowspan.'"' : '');
 
                 $html .= '<'.$tag.$attributes.' style="padding: '.$padding.'; vertical-align: '.$valign.'; '
-                    .$border.$width.$this->css($style, $doc).'">'.$this->cellContent($cell, $doc).'</'.$tag.'>';
+                    .$border.$width.$this->css($style, $doc).$this->overlay($cell, $doc).'">'.$this->cellContent($cell, $doc).'</'.$tag.'>';
             }
 
             $html .= '</tr>';
@@ -279,6 +280,31 @@ class HtmlRenderer
     private static function valign(mixed $valign): string
     {
         return in_array($valign, ['middle', 'bottom'], true) ? $valign : 'top';
+    }
+
+    /** A cell's "overlay": a stamp as the cell's background, behind its text. */
+    private function overlay(array $cell, DocContext $doc): string
+    {
+        $overlay = $cell['overlay'] ?? null;
+
+        if (! is_array($overlay) || ! is_string($overlay['image'] ?? null) || $overlay['image'] === '') {
+            return '';
+        }
+
+        $uri = $doc->image($overlay['image']);
+        $bytes = $uri === null ? false : base64_decode(substr($uri, strpos($uri, ',') + 1), true);
+        $box = is_string($bytes) ? Stamp::measure($overlay, $bytes) : null;
+        $stamp = $box === null ? null : Stamp::forPdf($bytes, $box, $doc->isRtl());
+
+        if ($stamp === null) {
+            if ($uri !== null) {
+                $doc->warn('easy-pdf-word: a cell overlay must be a PNG, JPEG, GIF, WebP or BMP image inside its cell; it was left out.');
+            }
+
+            return '';
+        }
+
+        return ' '.Stamp::css($stamp, $doc->isRtl());
     }
 
     private function cellContent(array $cell, DocContext $doc): string
