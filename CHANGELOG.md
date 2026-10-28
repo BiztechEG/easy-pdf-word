@@ -15,7 +15,6 @@ All notable changes to `biztecheg/easy-pdf-word` are documented here. The format
 - `keep_together => true` keeps a table on one page: `page-break-inside: avoid` in PDF, and every row kept with the next in Word.
 - A builder table cell's `rowspan` merges it with the cells below, written the HTML way (the rows below leave out the cells it covers): a `rowspan` attribute in PDF, `vMerge` in Word.
 - `Document::blocks()` gives the body blocks without rendering (a `make()` document's, or a template's `layout.php`/`word.php` run with its data; none for views, HTML and `word.docx` templates), and `Document::text()` the text of the headers and footers, then of the body: table cells joined with tabs and rows with new lines, rich text reduced to its text. `Doc::make()->blocks()` used to throw `BadMethodCallException`.
-
 - A `list($items, ['ordered' => true, 'start' => 1])` builder block: numbered or bulleted, with sub-lists, in PDF (`ol`/`ul`) and Word (a numbering style per list and list paragraphs, right to left in RTL documents). An item is a string, a run, a list of runs, or `[item, [sub-items]]`; sub-lists are numbered like their list. Numbers follow `->numerals('arabic')`. Rich text and the list block share their Word numbering levels.
 
 ### Changed
