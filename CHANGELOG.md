@@ -4,6 +4,14 @@ All notable changes to `biztecheg/easy-pdf-word` are documented here. The format
 
 ## [Unreleased]
 
+### Added
+
+- `DocumentBuilder::row($cells, $options)` builds a table row with options: `style` (bold, italic, size, color, background, align, border for every cell; a cell's own style wins), `total` (bold, with a line above it; several rows can be totals) and `keep_with_next` (the row stays on one page with the next one, in PDF and Word). Rows that are not `row()` objects, including rows built from records, are read as before.
+
+### Changed
+
+- mPDF 8.2.4 is the lowest supported version (`conflict` with `<8.2.4`): it is the first to keep a table row with the next one.
+
 ## [1.2.0] - 2026-10-13
 
 ### Added
